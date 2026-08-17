@@ -376,6 +376,18 @@ function guideList() {
     if (seen.has(a)) return;
     out.push({archetype: a, label: R[a].label || a, guide: "", gi: -1});
   });
+  // **티어 순으로.** 예전에는 해설 글자 수 순이라 점유 24%인 툰이 1.3%짜리
+  // 아래에 있었다. 읽는 사람은 지금 많이 만나는 덱부터 찾는다.
+  const rank = {}, share = {};
+  (D.tier.rows || []).forEach((t, i) => { rank[t.name] = i; share[t.name] = t.share; });
+  out.forEach(g => { g.share = share[g.archetype]; });
+  out.sort((a, b) => {
+    const ra = rank[a.archetype], rb = rank[b.archetype];
+    if (ra != null && rb != null) return ra - rb;
+    if (ra != null) return -1;                       // 티어표에 있는 것 먼저
+    if (rb != null) return 1;
+    return (b.guide || "").length - (a.guide || "").length;
+  });
   return out;
 }
 
@@ -385,6 +397,7 @@ function vGuide(el) {
   el.innerHTML = `<div class="card">${L.map((g, i) => {
     const rt = R[g.archetype];
     const bits = [];
+    if (g.share != null) bits.push(`점유 ${g.share}%`);
     if (rt) bits.push(`전개 ${rt.routes.length}갈래`);
     if (g.guide) bits.push(`해설 ${(g.guide.length / 1000).toFixed(1)}천자`);
     else bits.push("해설 없음");
