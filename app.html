@@ -100,7 +100,7 @@ nav .ic{font-size:19px;line-height:19px}
 /* 전개가 언제 기준인지 */
 .newtx{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);
   font-size:13px;line-height:20px;color:var(--body);white-space:pre-wrap}
-.why{padding:var(--lg) 0;border-bottom:1px solid var(--border)}\n.why:last-child{border-bottom:0}\n.whytx{margin-top:6px;font-size:14px;line-height:22px;color:var(--body)}\n.whytx p{margin:0}\n.whytx b{color:var(--fg)}\n.fr{padding:var(--lg)}
+.why{padding:var(--lg) 0;border-bottom:1px solid var(--border)}\n.why:last-child{border-bottom:0}\n.whytx{margin-top:6px;font-size:14px;line-height:22px;color:var(--body)}\n.whytx p{margin:0}\n.whytx b{color:var(--fg)}\n.orig{font-size:12.5px;line-height:19px;color:var(--muted);margin-top:2px}\n.fr{padding:var(--lg)}
 .fr-h{display:flex;align-items:center;gap:8px;font-size:14px;line-height:22px;color:var(--fg)}
 .fr-h b{font-weight:600}
 .fr-ok,.fr-no,.fr-un{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;flex:0 0 auto}
@@ -469,6 +469,16 @@ function whyBlock(d) {
     ${d.why_source ? `<div class="card small muted">근거: ${esc(d.why_source)}</div>` : ""}`;
 }
 
+/* 출처 한 줄. **source 는 {kind,id,url,text} 인 객체다** — 예전처럼 문자열로
+   찍으면 [object Object] 가 나온다. */
+function srcLine(src) {
+  if (!src) return "";
+  if (typeof src === "string") return ` 근거: ${esc(src)}`;
+  if (src.kind === "youtube" && src.id)
+    return ` 근거: 유튜브 <b>${esc(src.id)}</b>`;
+  return src.text ? ` 근거: ${esc(src.text)}` : "";
+}
+
 /* 전개 한 갈래. **각 단계에 "여기서 맞으면" 을 바로 붙인다** —
    따로 모아두면 몇 단계 이야기인지 눈으로 못 잇는다. */
 function routeBlock(d, rt) {
@@ -497,14 +507,17 @@ function routeBlock(d, rt) {
   return `
     ${d.routes.length > 1 ? `<div class="chips">${d.routes.map((x, i) =>
       `<button class="chip${i === GR ? " on" : ""}" onclick="GR=${i};drawGuide()">${
-        x.form ? esc(x.form) + " · " : ""}${esc(x.starter)} 스타트</button>`).join("")}</div>` : ""}
+        esc(x.label || x.starter)}</button>`).join("")}</div>` : ""}
 
     ${freshBlock(d, rt)}
 
     <div class="card" style="margin-top:var(--lg)">
       <div class="row between">
-        <div class="bd"><div class="nm">${esc(rt.starter)} 스타트</div>
-          <div class="sb" style="white-space:normal">${esc(rt.note || "")}</div></div>
+        <div class="bd"><div class="nm">${esc(rt.label || rt.starter)}</div>
+          ${rt.starter_ja ? `<div class="orig">${esc(rt.starter_ja)}</div>` : ""}
+          <div class="sb" style="white-space:normal">${esc(rt.summary || rt.note || "")}</div>
+          ${rt.hand && rt.hand !== rt.summary ? `<div class="sb" style="white-space:normal">시작 패 · ${esc(rt.hand)}</div>` : ""}
+        </div>
         <div class="vl">${s ? pct(s.p) : `<span class="muted small">—</span>`}</div>
       </div>
       ${s ? `<div class="bar"><i style="width:${Math.min(s.p * 2, 100)}%"></i></div>
@@ -528,6 +541,7 @@ function routeBlock(d, rt) {
           <div class="step-n">${i + 1}</div>
           <div class="bd">
             <div class="step-t">${esc(st.t)}</div>
+            ${st.t_ja ? `<div class="orig">${esc(st.t_ja)}</div>` : ""}
             ${st.ts ? `<div class="sb">${esc(st.ts)}</div>` : ""}
           </div>
         </div>
@@ -542,7 +556,7 @@ function routeBlock(d, rt) {
 
     <div class="card small muted">
       확률은 <b>덱 40장 · 선공 5장</b> 기준, 채용률 × 평균 매수 가중입니다.
-      3장이면 33.8% · 2장 23.7% · 1장 12.5%.${rt.source ? ` 근거: ${esc(rt.source)}` : ""}
+      3장이면 33.8% · 2장 23.7% · 1장 12.5%.${srcLine(rt.source)}
     </div>`;
 }
 
