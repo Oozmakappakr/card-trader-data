@@ -553,6 +553,16 @@ function counterBlock(d) {
           <span class="ctr-q">${linkCards(esc(w.text))}</span></div>`).join("")}
       </div>`).join("")}` : ""}
 
+    ${(c.newcards || []).length ? `<div class="ctr-s">최근 나온 카드
+        <span class="muted">· 환경 전체에서 지금 보이는 것 · 건수 그대로</span></div>
+      ${c.newcards.slice(0, 8).map(x => `<div class="ctr-p">
+        <span class="wchip">${x.decks}덱</span>
+        <span class="ctr-q">${linkCards(esc(x.name))}
+          <span class="muted">· ${x.archetypes}개 덱이 씀${
+            x.side ? " · 사이드에도" : ""} · 발매 ${esc(x.released)}</span></span></div>`).join("")}
+      <div class="ctr-b">표본이 얇습니다 — 갓 나온 카드는 덱리스트가 아직 적습니다.
+        비율 대신 건수를 그대로 적었습니다.</div>` : ""}
+
     <div class="ctr-b" style="margin-top:12px">
       <b>«확인된 저지점»만 근거가 있는 것</b>입니다. 아래 둘은 카드 텍스트와 이 덱의
       전개를 맞춰 고른 것이고 <b>승률 자료가 아닙니다.</b></div>
