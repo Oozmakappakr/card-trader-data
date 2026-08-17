@@ -100,7 +100,16 @@ nav .ic{font-size:19px;line-height:19px}
 /* 전개가 언제 기준인지 */
 .newtx{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);
   font-size:13px;line-height:20px;color:var(--body);white-space:pre-wrap}
-.why{padding:var(--lg) 0;border-bottom:1px solid var(--border)}\n.why:last-child{border-bottom:0}\n.whytx{margin-top:6px;font-size:14px;line-height:22px;color:var(--body)}\n.whytx p{margin:0}\n.whytx b{color:var(--fg)}\n.orig{font-size:12.5px;line-height:19px;color:var(--muted);margin-top:2px}\n.fr{padding:var(--lg)}
+.why{padding:var(--lg) 0;border-bottom:1px solid var(--border)}\n.why:last-child{border-bottom:0}\n.whytx{margin-top:6px;font-size:14px;line-height:22px;color:var(--body)}\n.whytx p{margin:0}\n.whytx b{color:var(--fg)}\n/* 카드 이름 — 누를 수 있다는 걸 밑줄로만 알린다. 색을 주면 글이 알록달록해진다 */
+.cardw{border-bottom:1px dashed var(--muted);cursor:pointer}
+.cardw:active{background:var(--weak-bg)}
+.pop{position:fixed;z-index:60;background:var(--card,#fff);border:1px solid var(--border);
+  border-radius:14px;padding:14px 16px;box-shadow:0 8px 28px rgba(0,0,0,.16);
+  max-height:46vh;overflow-y:auto}
+.pop-n{font-size:15px;font-weight:600;color:var(--fg);line-height:22px}
+.pop-s{font-size:12.5px;color:var(--primary);margin-top:3px}
+.pop-t{font-size:13.5px;line-height:21px;color:var(--body);margin-top:8px;white-space:pre-wrap}
+.orig{font-size:12.5px;line-height:19px;color:var(--muted);margin-top:2px}\n.fr{padding:var(--lg)}
 .fr-h{display:flex;align-items:center;gap:8px;font-size:14px;line-height:22px;color:var(--fg)}
 .fr-h b{font-weight:600}
 .fr-ok,.fr-no,.fr-un{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;flex:0 0 auto}
@@ -181,6 +190,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
 const jesc = s => esc(String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
 let D = null, CUR = "tier";
 
+document.addEventListener("click", () => closePop());
 function boot() {
   try {
     D = JSON.parse(window.Bridge ? Bridge.load() : "{}");
@@ -469,6 +479,71 @@ function whyBlock(d) {
     ${d.why_source ? `<div class="card small muted">근거: ${esc(d.why_source)}</div>` : ""}`;
 }
 
+/* 전개 글에서 **카드 이름을 눌러 효과를 본다.**
+
+   새 화면으로 넘기면 읽던 자리를 잃는다. 그래서 누른 자리 바로 아래에
+   말풍선을 띄우고, 아무 데나 다시 누르면 닫는다.
+
+   이름 표시는 화면에서 한다 — 원본 글을 건드리지 않아야 나중에 다른 형태로
+   다시 뽑을 수 있다. */
+let CARDKEYS = null;
+function cardKeys() {
+  if (!CARDKEYS) {
+    // 긴 이름부터 찾아야 «엘펜노츠 루키나» 가 «엘펜노츠» 로 먼저 걸리지 않는다
+    CARDKEYS = Object.keys(D.cards || {}).sort((a, b) => b.length - a.length);
+  }
+  return CARDKEYS;
+}
+
+/* 글 안의 카드 이름을 누를 수 있게 감싼다. 이미 esc() 된 글을 받는다. */
+function linkCards(safe) {
+  const ks = cardKeys();
+  if (!ks.length) return safe;
+  let out = safe, marks = [];
+  ks.forEach(name => {
+    const e = esc(name);
+    if (out.indexOf(e) < 0) return;
+    const id = marks.length;
+    marks.push(name);
+    out = out.split(e).join(`\u0000${id}\u0001`);
+  });
+  return out.replace(/\u0000(\d+)\u0001/g, (_, i) =>
+    `<span class="cardw" onclick="popCard(event,'${jesc(marks[+i])}')">${esc(marks[+i])}</span>`);
+}
+
+function popCard(ev, name) {
+  ev.stopPropagation();
+  const c = (D.cards || {})[name];
+  const old = document.querySelector("#pop");
+  if (old && old.dataset.name === name) { closePop(); return; }
+  closePop();
+  const el = document.createElement("div");
+  el.id = "pop"; el.className = "pop"; el.dataset.name = name;
+  el.innerHTML = `<div class="pop-n">${esc(name)}</div>
+    ${c && c.spec ? `<div class="pop-s">${esc(c.spec)}</div>` : ""}
+    <div class="pop-t">${c && c.text ? esc(c.text)
+      : "이 카드의 한글 텍스트를 아직 못 받았습니다."}</div>`;
+  document.body.appendChild(el);
+  // 누른 자리 아래에. 화면 밖으로 나가면 안쪽으로 밀어 넣는다.
+  const r = ev.target.getBoundingClientRect();
+  const w = Math.min(320, window.innerWidth - 24);
+  el.style.width = w + "px";
+  let left = r.left + r.width / 2 - w / 2;
+  left = Math.max(12, Math.min(left, window.innerWidth - w - 12));
+  el.style.left = left + "px";
+  const below = r.bottom + 8;
+  if (below + el.offsetHeight > window.innerHeight - 12 && r.top > el.offsetHeight + 20) {
+    el.style.top = (r.top - el.offsetHeight - 8) + "px";
+  } else {
+    el.style.top = below + "px";
+  }
+}
+
+function closePop() {
+  const p = document.querySelector("#pop");
+  if (p && p.parentNode) p.parentNode.removeChild(p);
+}
+
 /* 출처 한 줄. **source 는 {kind,id,url,text} 인 객체다** — 예전처럼 문자열로
    찍으면 [object Object] 가 나온다. */
 function srcLine(src) {
@@ -493,10 +568,10 @@ function routeBlock(d, rt) {
     return `<div class="hit">
       <div class="hit-h">
         <span class="hit-x">✕</span>
-        <b>${esc(b.card)}</b> 를 맞으면
+        <b>${linkCards(esc(b.card))}</b> 를 맞으면
         ${o ? `<span class="hit-p">${o.p}%</span>` : ""}
       </div>
-      <div class="hit-b">${esc(b.effect)}</div>
+      <div class="hit-b">${linkCards(esc(b.effect))}</div>
       <div class="hit-o">${o
         ? `<b>→ ${esc(b.out_card)}</b> 가 패에 있으면 뚫린다
            <span class="muted">(채용 ${o.share}% × ${o.copies}장 → ${o.p}%)</span>`
@@ -540,7 +615,7 @@ function routeBlock(d, rt) {
         <div class="step-h">
           <div class="step-n">${i + 1}</div>
           <div class="bd">
-            <div class="step-t">${esc(st.t)}</div>
+            <div class="step-t">${linkCards(esc(st.t))}</div>
             ${st.t_ja ? `<div class="orig">${esc(st.t_ja)}</div>` : ""}
             ${st.ts ? `<div class="sb">${esc(st.ts)}</div>` : ""}
           </div>
@@ -552,7 +627,7 @@ function routeBlock(d, rt) {
     ${rt.board && rt.board.length ? `
       <h4 style="margin:var(--xl) 0 8px">최종 반면</h4>
       <div class="card">${rt.board.map(b =>
-        `<div class="item"><div class="bd"><div class="nm">${esc(b)}</div></div></div>`).join("")}</div>` : ""}
+        `<div class="item"><div class="bd"><div class="nm">${linkCards(esc(b))}</div></div></div>`).join("")}</div>` : ""}
 
     <div class="card small muted">
       확률은 <b>덱 40장 · 선공 5장</b> 기준, 채용률 × 평균 매수 가중입니다.
@@ -803,6 +878,9 @@ function closeSheet() {
 }
 window.addEventListener("popstate", () => $("#sheet").classList.remove("on"));
 window.appBack = () => {
+  // 말풍선이 떠 있으면 그것부터 닫는다 — 뒤로가기로 화면이 통째로 넘어가면
+  // 읽던 자리를 잃는다
+  if (document.querySelector("#pop")) { closePop(); return true; }
   if ($("#sheet").classList.contains("on")) { closeSheet(); return true; }
   if (CUR !== "tier") { go("tier"); return true; }
   return false;
