@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>카드 트레이더</title>
+<style>
+/* 토스 디자인 시스템(TDS) — docs/toss-design.md 참조.
+   Toss Product Sans 는 전용 서체라 시스템 서체로 대체하고 체계만 따랐다. */
+:root{
+  --primary:#3182f6; --primary-hover:#2272eb;
+  --fg:#191f28; --body:#4e5968; --muted:#8b95a1;
+  --surface:#f2f4f6; --border:#e5e8eb; --canvas:#fff;
+  --danger:#e42939; --weak-bg:#e8f3ff; --weak-fg:#1b64da;
+  --lg:16px; --xl:24px; --xxl:32px; --r:16px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;overscroll-behavior:none}
+body{background:var(--surface);color:var(--body);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
+  font-size:16px;line-height:24px;padding-bottom:calc(70px + var(--safe-b));}
+h2{font-size:24px;font-weight:600;line-height:36px;color:var(--fg);margin:0}
+h4{font-size:17px;font-weight:600;line-height:26px;color:var(--fg);margin:0}
+.small{font-size:14px;line-height:21px}
+.muted{color:var(--muted)}
+.num{font-weight:700;font-variant-numeric:tabular-nums;color:var(--fg)}
+
+header{position:sticky;top:0;z-index:20;background:var(--canvas);
+  padding:var(--lg) var(--lg) 12px;border-bottom:1px solid var(--border)}
+header .t{font-size:22px;font-weight:700;color:var(--fg);line-height:33px}
+header .s{font-size:13px;color:var(--muted);margin-top:2px}
+main{padding:var(--lg)}
+.card{background:var(--canvas);border-radius:var(--r);padding:var(--xl) var(--lg);
+  margin-bottom:var(--lg)}
+.row{display:flex;align-items:center;gap:var(--lg)}
+.between{justify-content:space-between}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{display:inline-flex;align-items:center;height:34px;padding:0 14px;border:0;
+  border-radius:17px;background:var(--surface);color:var(--body);
+  font-size:14px;font-weight:600;font-family:inherit;white-space:nowrap}
+.chip.on{background:var(--weak-bg);color:var(--weak-fg)}
+
+button.p{width:100%;height:56px;border:0;border-radius:var(--r);background:var(--primary);
+  color:#fff;font-size:17px;font-weight:600;font-family:inherit}
+button.p:active{background:var(--primary-hover)}
+button.p.g{background:var(--surface);color:var(--body)}
+
+.item{display:flex;align-items:center;gap:var(--lg);padding:var(--lg) 0;
+  border-bottom:1px solid var(--border)}
+.item:last-child{border-bottom:0}
+.rank{width:26px;flex:0 0 26px;text-align:center;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--muted);font-size:15px}
+.bd{flex:1;min-width:0}
+.nm{color:var(--fg);font-weight:600;font-size:16px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.sb{font-size:13px;color:var(--muted);margin-top:1px;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.vl{text-align:right;white-space:nowrap}
+.bar{height:6px;border-radius:3px;background:var(--surface);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:var(--primary);border-radius:3px}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;
+  font-weight:600;background:var(--weak-bg);color:var(--weak-fg)}
+.tag.g{background:var(--surface);color:var(--muted)}
+
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--canvas);
+  border-top:1px solid var(--border);display:flex;padding-bottom:var(--safe-b)}
+nav button{flex:1;border:0;background:none;padding:9px 0 11px;font-family:inherit;
+  font-size:11px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;
+  align-items:center;gap:3px}
+nav button.on{color:var(--primary)}
+nav .ic{font-size:19px;line-height:19px}
+
+.empty{padding:var(--xxl) var(--lg);text-align:center;color:var(--muted);font-size:14px}
+.err{background:#fff;border-radius:var(--r);padding:var(--xl) var(--lg);
+  color:var(--danger);font-size:14px}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--primary);
+  border-radius:50%;display:inline-block;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* 공략 본문 — 읽는 화면이라 행간을 넉넉히 */
+.doc{font-size:15.5px;line-height:27px;color:var(--body)}
+.doc h1,.doc h2,.doc h3{color:var(--fg);font-size:18px;line-height:28px;
+  font-weight:700;margin:26px 0 8px}
+.doc p{margin:0 0 14px}
+.doc b{color:var(--fg)}
+.doc code{background:var(--surface);border-radius:4px;padding:1px 5px;font-size:13.5px}
+.doc pre{background:var(--surface);border-radius:10px;padding:14px;overflow-x:auto;
+  font-size:12.5px;line-height:20px;margin:0 0 16px}
+.doc blockquote{margin:0 0 16px;padding:12px 14px;background:var(--surface);
+  border-radius:10px;font-size:14px;line-height:23px;color:var(--muted)}
+.doc table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14px}
+.doc th,.doc td{padding:9px 8px;border-bottom:1px solid var(--border);text-align:left}
+.doc th{color:var(--muted);font-weight:600;font-size:12.5px}
+.doc ul{margin:0 0 16px;padding-left:20px}
+.doc li{margin-bottom:6px}
+
+/* 전개 단계 — 저지점이 붙은 단계는 왼쪽에 붉은 선을 준다 */
+.step{padding:var(--lg) 0;border-bottom:1px solid var(--border)}
+.step:last-child{border-bottom:0}
+.step-h{display:flex;gap:var(--lg);align-items:flex-start}
+.step-n{width:26px;flex:0 0 26px;text-align:center;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--primary);font-size:15px;line-height:23px}
+.step-t{color:var(--fg);font-size:15px;line-height:23px}
+.step.danger .step-n{color:var(--danger)}
+.hit{margin:10px 0 0 42px;padding:12px 14px;background:#fff5f5;
+  border-radius:12px;border-left:3px solid var(--danger)}
+.hit-h{display:flex;align-items:center;gap:6px;color:var(--fg);font-size:14px;line-height:21px}
+.hit-x{color:var(--danger);font-weight:700}
+.hit-h b{color:var(--danger)}
+.hit-p{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;
+  color:var(--primary);font-size:15px}
+.hit-b{font-size:13.5px;line-height:21px;color:var(--body);margin-top:4px}
+.hit-o{font-size:13.5px;line-height:21px;color:var(--body);margin-top:8px;
+  padding-top:8px;border-top:1px solid #ffe0e0}
+.hit-o b{color:var(--fg)}
+.sheet{position:fixed;inset:0;z-index:40;background:var(--canvas);overflow-y:auto;
+  display:none;padding-bottom:var(--xxl)}
+.sheet.on{display:block}
+.sheet header{display:flex;align-items:center;gap:12px}
+.back{border:0;background:none;font-size:24px;color:var(--fg);padding:0 4px;line-height:1}
+</style>
+</head>
+<body>
+
+<header><div class="t" id="ttl">티어</div><div class="s" id="sub"></div></header>
+<main id="view"><div class="empty"><span class="spin"></span></div></main>
+
+<div class="sheet" id="sheet">
+  <header>
+    <button class="back" onclick="closeSheet()">←</button>
+    <div style="flex:1;min-width:0">
+      <div class="t" id="sttl" style="font-size:18px;line-height:27px;overflow:hidden;
+        text-overflow:ellipsis;white-space:nowrap"></div>
+      <div class="s" id="ssub"></div>
+    </div>
+  </header>
+  <main id="sbody"></main>
+</div>
+
+<nav>
+  <button class="on" data-t="tier" onclick="go('tier')"><span class="ic">▦</span>티어</button>
+  <button data-t="week" onclick="go('week')"><span class="ic">◍</span>주차</button>
+  <button data-t="guide" onclick="go('guide')"><span class="ic">▣</span>공략</button>
+  <button data-t="side" onclick="go('side')"><span class="ic">⊞</span>사이드</button>
+  <button data-t="jp" onclick="go('jp')"><span class="ic">⇄</span>일본</button>
+  <button data-t="set" onclick="go('set')"><span class="ic">⚙</span>설정</button>
+</nav>
+
+<script>
+/* 이 앱은 **자기 데이터로 돈다.** APK 안에 담긴 data.json 을 읽어 화면을 그리고,
+   맥에 붙을 수 있을 때만 새로 받아 덮어쓴다. 서버가 꺼져 있어도 전부 열린다. */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* onclick 안에 넣을 문자열 — JS 이스케이프 먼저, 그 다음 HTML */
+const jesc = s => esc(String(s ?? "").replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
+let D = null, CUR = "tier";
+
+function boot() {
+  try {
+    D = JSON.parse(window.Bridge ? Bridge.load() : "{}");
+  } catch (e) { D = null; }
+  if (!D || !D.tier) {
+    $("#view").innerHTML = `<div class="err">데이터를 읽지 못했습니다.</div>`;
+    return;
+  }
+  go("tier");
+  autoSync();          // 켤 때마다 조용히 최신으로 맞춘다
+}
+
+/* 저장된 주소가 있으면 **묻지 않고** 받아온다. 맥이 꺼져 있거나 밖이면
+   조용히 실패하고 들고 있던 자료로 그냥 쓴다 — 화면을 막지 않는다. */
+let SYNCING = false;
+function autoSync() {
+  if (!window.Bridge || SYNCING) return;
+  const u = Bridge.getUrl();
+  if (!u) return;
+  SYNCING = true;
+  mark("갱신 확인 중…");
+  Bridge.sync(u);
+}
+function mark(t) {
+  const s = $("#sub");
+  if (s && CUR === "tier") s.textContent = t;
+}
+function go(t) {
+  CUR = t;
+  document.querySelectorAll("nav button").forEach(b =>
+    b.classList.toggle("on", b.dataset.t === t));
+  window.scrollTo(0, 0);
+  // 없는 탭이면 첫 탭으로. 예전 버전이 저장해 둔 탭 이름('route')이 남아 있어도
+  // 흰 화면이 되지 않게 한다 — 탭을 합치면 반드시 생기는 상황이다.
+  const V = {tier:vTier, week:vWeek, guide:vGuide, side:vSide, jp:vJp, set:vSet};
+  const f = V[t] || (CUR = "tier", V.tier);
+  document.querySelectorAll("nav button").forEach(b =>
+    b.classList.toggle("on", b.dataset.t === CUR));
+  f($("#view"));
+}
+function head(t, s) { $("#ttl").textContent = t; $("#sub").textContent = s || ""; }
+const ago = iso => {
+  if (!iso) return "";
+  const d = Math.floor((Date.now() - new Date(iso)) / 86400000);
+  return d <= 0 ? "오늘" : d === 1 ? "어제" : `${d}일 전`;
+};
+
+/* ---------------- 티어 ---------------- */
+function vTier(el) {
+  const t = D.tier;
+  head("티어", `${t.total}덱 · ${t.since} 이후 · 자료 ${ago(D.built_at)}`);
+  const max = t.rows.length ? t.rows[0].share : 1;
+  el.innerHTML = `<div class="card">${t.rows.map((x, i) => `
+    <div class="item" onclick="openDeck('${esc(x.name)}')">
+      <div class="rank">${i + 1}</div>
+      <div class="bd">
+        <div class="nm">${esc(x.label)}</div>
+        <div class="sb">${x.n}덱 · 우승 ${x.wins} · 4강 ${x.top4}</div>
+        <div class="bar"><i style="width:${(x.share / max * 100).toFixed(0)}%"></i></div>
+      </div>
+      <div class="vl"><span class="num">${x.share.toFixed(1)}</span><span class="muted small">%</span></div>
+    </div>`).join("")}</div>`;
+}
+
+/* ---------------- 주차 · 권역 ---------------- */
+let REG = "전체";
+function vWeek(el) {
+  const r = D.regions, ws = r.weeks;
+  const regs = ["전체", ...Object.keys(r.region_total).filter(g => r.region_total[g] > 0)];
+  if (!regs.includes(REG)) REG = "전체";
+  head("주차별", `${ws[0]} ~ ${ws[ws.length - 1]}`);
+  el.innerHTML = `
+    <div class="chips">${regs.map(g =>
+      `<button class="chip${g === REG ? " on" : ""}" onclick="setReg('${esc(g)}')">${esc(g)}</button>`).join("")}</div>
+    <div class="small muted" id="wh" style="margin:var(--lg) 0 8px"></div>
+    <div class="card" id="wk"></div>
+    ${r.empty_weeks && r.empty_weeks.length ? `<div class="card small muted">
+      자료가 없는 주: <b>${r.empty_weeks.map(esc).join(", ")}</b><br>
+      대회가 없던 게 아니라 수집이 안 된 것입니다.</div>` : ""}`;
+  drawWeek();
+}
+function setReg(g) { REG = g; vWeek($("#view")); }
+function drawWeek() {
+  const r = D.regions, ws = r.weeks;
+  const cov = r.coverage[REG] || {};
+  const base = ws.reduce((s, w) => s + (cov[w] || 0), 0);
+  const rows = r.rows.map(x => {
+    const cs = REG === "전체" ? x.cells : x.by_region[REG];
+    return {label:x.label || x.archetype, n:cs.reduce((s, c) => s + c.n, 0), cs};
+  }).filter(x => x.n).sort((a, b) => b.n - a.n).slice(0, 14);
+  $("#wh").textContent = `${REG} · 입상덱 ${base}건`;
+  $("#wk").innerHTML = rows.length ? rows.map(x => `
+    <div class="item">
+      <div class="bd">
+        <div class="nm">${esc(x.label)}</div>
+        <div class="sb">${ws.map((w, i) => `${w.slice(-3)} ${x.cs[i].n || "·"}`).join("　")}</div>
+      </div>
+      <div class="vl"><span class="num">${base ? (x.n * 100 / base).toFixed(1) : "0.0"}</span><span class="muted small">%</span></div>
+    </div>`).join("") : `<div class="empty">이 권역 자료가 없습니다</div>`;
+}
+
+/* ---------------- 공략 ---------------- */
+function vGuide(el) {
+  head("공략", `${D.guides.length}개 · 자료 ${ago(D.built_at)}`);
+  const R = D.routes || {};
+  el.innerHTML = `<div class="card">${D.guides.map((g, i) => {
+    const rt = R[g.archetype];
+    return `<div class="item" onclick="openGuide(${i})">
+      <div class="bd">
+        <div class="nm">${esc(g.label)}</div>
+        <div class="sb">${rt ? `전개 ${rt.routes.length}갈래 · ` : ""}해설 ${
+          (g.guide.length / 1000).toFixed(1)}천자${g.n_decks ? ` · 입상덱 ${g.n_decks}` : ""}</div>
+      </div>
+      ${g.tier ? `<span class="tag${/3|외/.test(g.tier) ? " g" : ""}">${esc(g.tier)}</span>` : ""}
+      <div class="muted">›</div>
+    </div>`;
+  }).join("")}</div>`;
+}
+let GI = 0, GR = 0;      // 열려 있는 공략 / 고른 초동
+function openGuide(i) {
+  GI = i; GR = 0;
+  const g = D.guides[i];
+  openSheet(g.label, "전개와 공략");
+  drawGuide();
+}
+
+function drawGuide() {
+  const g = D.guides[GI];
+  const d = (D.routes || {})[g.archetype];
+  const rt = d && d.routes[GR];
+  $("#ssub").textContent = d && d.any_starter != null
+    ? `초동 중 하나라도 ${d.any_starter}%` : "공략 해설";
+
+  $("#sbody").innerHTML = `
+    ${d ? routeBlock(d, rt) : ""}
+    <h4 style="margin:var(--xl) 0 8px">해설 전문</h4>
+    <div class="card"><div class="doc">${md(g.guide)}</div></div>
+    ${(D.videos[g.archetype] || []).length ? `
+      <h4 style="margin:var(--xl) 0 8px">근거 영상</h4>
+      <div class="card">${D.videos[g.archetype].map(v => `
+        <div class="item"><div class="bd">
+          <div class="nm" style="font-size:15px">${esc(v.title)}</div>
+          <div class="sb">${esc(v.url)}</div></div></div>`).join("")}</div>` : ""}`;
+}
+
+/* 전개 한 갈래. **각 단계에 "여기서 맞으면" 을 바로 붙인다** —
+   따로 모아두면 몇 단계 이야기인지 눈으로 못 잇는다. */
+function routeBlock(d, rt) {
+  if (!rt) return "";
+  const s = rt.starter_stat;
+  const pct = v => `<span class="num">${v}</span><span class="muted small">%</span>`;
+  const general = rt.breaks.filter(b => !b.step);       // 전개 전반
+  const atStep = n => rt.breaks.filter(b => b.step === n);
+
+  const hit = b => {
+    const o = b.out_stat;
+    return `<div class="hit">
+      <div class="hit-h">
+        <span class="hit-x">✕</span>
+        <b>${esc(b.card)}</b> 를 맞으면
+        ${o ? `<span class="hit-p">${o.p}%</span>` : ""}
+      </div>
+      <div class="hit-b">${esc(b.effect)}</div>
+      <div class="hit-o">${o
+        ? `<b>→ ${esc(b.out_card)}</b> 가 패에 있으면 뚫린다
+           <span class="muted">(채용 ${o.share}% × ${o.copies}장 → ${o.p}%)</span>`
+        : `→ ${esc(b.out)}`}</div>
+    </div>`;
+  };
+
+  return `
+    ${d.routes.length > 1 ? `<div class="chips">${d.routes.map((x, i) =>
+      `<button class="chip${i === GR ? " on" : ""}" onclick="GR=${i};drawGuide()">${
+        esc(x.starter)} 스타트</button>`).join("")}</div>` : ""}
+
+    <div class="card" style="margin-top:${d.routes.length > 1 ? "var(--lg)" : "0"}">
+      <div class="row between">
+        <div class="bd"><div class="nm">${esc(rt.starter)} 스타트</div>
+          <div class="sb" style="white-space:normal">${esc(rt.note || "")}</div></div>
+        <div class="vl">${s ? pct(s.p) : `<span class="muted small">—</span>`}</div>
+      </div>
+      ${s ? `<div class="bar"><i style="width:${Math.min(s.p * 2, 100)}%"></i></div>
+        <div class="small muted" style="margin-top:6px">
+          채용 ${s.share}% · 평균 ${s.copies}장 → 선공 5장에 잡힐 확률 ${s.p}%</div>`
+        : `<div class="small muted" style="margin-top:6px">
+          확률을 못 냅니다 — 우리 입상덱 자료에 이 카드가 없습니다.</div>`}
+      <div class="small" style="margin-top:12px"><span class="tag">${esc(rt.disrupt || "")}</span></div>
+    </div>
+
+    ${general.length ? `<div class="card" style="padding:var(--lg)">
+      <div class="small muted" style="margin-bottom:8px">전개 전반에 걸리는 것</div>
+      ${general.map(hit).join("")}</div>` : ""}
+
+    <h4 style="margin:var(--xl) 0 8px">전개 순서
+      <span class="muted small">· ${rt.steps.length}단계</span></h4>
+    <div class="card">${rt.steps.map((st, i) => {
+      const bs = atStep(i + 1);
+      return `<div class="step${bs.length ? " danger" : ""}">
+        <div class="step-h">
+          <div class="step-n">${i + 1}</div>
+          <div class="bd">
+            <div class="step-t">${esc(st.t)}</div>
+            ${st.ts ? `<div class="sb">${esc(st.ts)}</div>` : ""}
+          </div>
+        </div>
+        ${bs.map(hit).join("")}
+      </div>`;
+    }).join("")}</div>
+
+    ${rt.board && rt.board.length ? `
+      <h4 style="margin:var(--xl) 0 8px">최종 반면</h4>
+      <div class="card">${rt.board.map(b =>
+        `<div class="item"><div class="bd"><div class="nm">${esc(b)}</div></div></div>`).join("")}</div>` : ""}
+
+    <div class="card small muted">
+      확률은 <b>덱 40장 · 선공 5장</b> 기준, 채용률 × 평균 매수 가중입니다.
+      3장이면 33.8% · 2장 23.7% · 1장 12.5%.${rt.source ? ` 근거: ${esc(rt.source)}` : ""}
+    </div>`;
+}
+
+/* 마크다운 — 표·코드·인용까지 (공략 글이 이 문법을 쓴다) */
+function md(src) {
+  const lines = esc(src).split("\n");
+  let out = [], i = 0;
+  const block = s => /^(#{1,6}\s|&gt;|\||```|[-*]\s)/.test(s);
+  const inline = s => s
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^```/.test(l)) {
+      const buf = []; i++;
+      while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+      i++; out.push(`<pre>${buf.join("\n")}</pre>`); continue;
+    }
+    if (/^\|/.test(l) && /^\|[\s:|-]+\|?$/.test(lines[i + 1] || "")) {
+      const cell = r => r.replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const hd = cell(l); i += 2;
+      const body = [];
+      while (i < lines.length && /^\|/.test(lines[i])) body.push(cell(lines[i++]));
+      out.push(`<table><thead><tr>${hd.map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead>
+        <tbody>${body.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+      continue;
+    }
+    let m;
+    if ((m = l.match(/^#{1,6}\s*(.+)$/))) { out.push(`<h3>${inline(m[1])}</h3>`); i++; continue; }
+    if (/^&gt;/.test(l)) {
+      const buf = [];
+      while (i < lines.length && /^&gt;/.test(lines[i]))
+        buf.push(lines[i++].replace(/^&gt;\s?/, ""));
+      out.push(`<blockquote>${inline(buf.join(" "))}</blockquote>`); continue;
+    }
+    if (/^[-*]\s/.test(l)) {
+      const buf = [];
+      while (i < lines.length && /^[-*]\s/.test(lines[i]))
+        buf.push(`<li>${inline(lines[i++].replace(/^[-*]\s/, ""))}</li>`);
+      out.push(`<ul>${buf.join("")}</ul>`); continue;
+    }
+    if (!l.trim()) { i++; continue; }
+    // **첫 줄은 조건 없이 삼킨다.** 블록 기호로 시작하는데 위에서 안 걸린 줄
+    // (` 로 여는 인라인 코드, 구분선 없는 표…) 이 문단 첫 줄이면, 여기서
+    // 걸러내는 순간 i 가 안 늘어 무한 루프가 된다 — 화면이 통째로 멈춘다.
+    const buf = [lines[i++]];
+    while (i < lines.length && lines[i].trim() && !block(lines[i]))
+      buf.push(lines[i++]);
+    out.push(`<p>${inline(buf.join("<br>"))}</p>`);
+  }
+  return out.join("");
+}
+
+/* ---------------- 사이드 ---------------- */
+function vSide(el) {
+  const ks = Object.keys(D.sides);
+  head("사이드", "덱을 누르면 사이드·특이 채용");
+  el.innerHTML = `<div class="card">${ks.map(k => `
+    <div class="item" onclick="openDeck('${esc(k)}')">
+      <div class="bd"><div class="nm">${esc(D.sides[k].label || k)}</div>
+        <div class="sb">입상덱 ${D.sides[k].decks}개</div></div>
+      <div class="muted">›</div>
+    </div>`).join("") || `<div class="empty">자료 없음</div>`}</div>`;
+}
+function openDeck(name) {
+  const s = D.sides[name];
+  if (!s) { const g = D.guides.findIndex(g => g.archetype === name);
+            return g >= 0 ? openGuide(g) : null; }
+  openSheet(s.label || name, `입상덱 ${s.decks}개 · 최근 6개월`);
+  const line = (nm, v, sub) => `
+    <div class="item"><div class="bd"><div class="nm">${esc(nm)}</div>
+      <div class="sb">${esc(sub || "")}</div></div>
+      <div class="vl"><span class="num">${v.toFixed(0)}</span><span class="muted small">%</span></div></div>`;
+  const gi = D.guides.findIndex(g => g.archetype === name);
+  $("#sbody").innerHTML = `
+    ${gi >= 0 ? `<button class="p" style="margin-bottom:var(--lg)"
+        onclick="openGuide(${gi})">공략 해설 보기</button>` : ""}
+    <h4 style="margin:0 0 8px">사이드덱</h4>
+    <div class="card">${s.side.map(x =>
+      line(x.name, x.side, `평균 ${x.avg}장 · ${x.placement}${
+        x.roles.length ? " · " + x.roles.slice(0,2).join("/") : ""}`)).join("")
+      || `<div class="empty">자료 없음</div>`}</div>
+    <h4 style="margin:var(--xl) 0 8px">특이 채용
+      <span class="muted small">· 이 덱만 유난히 많이 쓰는 카드</span></h4>
+    ${s.engines.map(e => `<div class="card">
+      <div class="small" style="color:var(--primary);font-weight:600;margin-bottom:8px">
+        ${esc(e.engine === "(단독)" ? "낱장" : e.engine)}</div>
+      ${e.cards.map(c => line(c.name, Math.max(c.main, c.side),
+        `전체 ${c.global}% · ×${c.lift}`)).join("")}</div>`).join("")
+      || `<div class="card"><div class="empty">없음</div></div>`}`;
+}
+
+/* ---------------- 일본 주간 티어표 ----------------
+   ガチまとめ 가 매주 올리는 S/A/B 랭크 표. 우리 집계(크롤링)와 **다른 출처**라
+   서로 대조하는 게 값이다. 여기 나온 덱은 우리가 못 잡은 것도 **전부** 보여준다. */
+let JPW = 0;
+function vJp(el) {
+  const j = D.jp;
+  if (!j || !j.weeks.length) {
+    head("일본", "");
+    el.innerHTML = `<div class="card"><div class="empty">일본 주간 자료가 없습니다.<br>
+      맥에서 <b>meta jp-sync</b> 를 돌린 뒤 갱신하세요.</div></div>`;
+    return;
+  }
+  if (JPW >= j.weeks.length) JPW = 0;
+  const w = j.weeks[JPW];
+  head("일본 주간 티어", `${j.source} · ${w.date}`);
+
+  const rankOrder = {S:0, A:1, B:2, C:3, D:4};
+  const byRank = {};
+  w.tiers.forEach(t => (byRank[t.rank] = byRank[t.rank] || []).push(t.name));
+  const ours = ja => {
+    const d = j.decks.find(x => x.ja === ja);
+    return d && d.label ? d.label : null;
+  };
+  const gi = ja => {
+    const d = j.decks.find(x => x.ja === ja);
+    return d && d.archetype ? D.guides.findIndex(g => g.archetype === d.archetype) : -1;
+  };
+  const chipRow = ja => {
+    const lab = ours(ja), i = gi(ja);
+    return `<div class="item"${i >= 0 ? ` onclick="openGuide(${i})"` : ""}>
+      <div class="bd">
+        <div class="nm">${esc(lab || ja)}</div>
+        <div class="sb">${lab ? esc(ja) : "우리 자료에 없는 덱"}</div>
+      </div>${i >= 0 ? `<div class="muted">›</div>` : ""}</div>`;
+  };
+
+  const total = w.total || 1;
+  el.innerHTML = `
+    <div class="chips">${j.weeks.map((x, i) =>
+      `<button class="chip${i === JPW ? " on" : ""}" onclick="JPW=${i};vJp($('#view'))">${
+        esc(x.date.slice(5))}</button>`).join("")}</div>
+
+    ${Object.keys(byRank).sort((a, b) => (rankOrder[a] ?? 9) - (rankOrder[b] ?? 9))
+      .map(r => `
+      <h4 style="margin:var(--xl) 0 8px">${esc(r)}랭크
+        <span class="muted small">· ${byRank[r].length}덱</span></h4>
+      <div class="card">${byRank[r].map(chipRow).join("")}</div>`).join("")
+      || `<div class="card"><div class="empty">이 주차엔 티어표가 없습니다</div></div>`}
+
+    ${w.dist.length ? `
+      <h4 style="margin:var(--xl) 0 8px">예선 덱 분포
+        <span class="muted small">· 분류된 ${total}덱${
+          w.players ? ` / 참가 ${w.players}명` : ""}</span></h4>
+      <div class="card">${w.dist.map(d => {
+        const lab = ours(d.name), i = gi(d.name);
+        return `<div class="item"${i >= 0 ? ` onclick="openGuide(${i})"` : ""}>
+          <div class="bd"><div class="nm">${esc(lab || d.name)}</div>
+            <div class="sb">${lab ? esc(d.name) : "우리 자료에 없는 덱"}</div>
+            <div class="bar"><i style="width:${(d.n / total * 100).toFixed(0)}%"></i></div></div>
+          <div class="vl"><span class="num">${d.n}</span><span class="muted small">덱</span></div>
+        </div>`;
+      }).join("")}</div>
+      ${w.other ? `<div class="card small muted">그 밖(その他) ${w.other}명은
+        분류되지 않아 위 비율에서 빠졌습니다.</div>` : ""}` : ""}
+
+    <h4 style="margin:var(--xl) 0 8px">여기 나온 덱 전부
+      <span class="muted small">· ${j.decks.length}종</span></h4>
+    <div class="card">${j.decks.map(d => {
+      const ranks = [...new Set(d.tiers.map(t => t.rank))].sort(
+        (a, b) => (rankOrder[a] ?? 9) - (rankOrder[b] ?? 9));
+      const i = d.archetype ? D.guides.findIndex(g => g.archetype === d.archetype) : -1;
+      return `<div class="item"${i >= 0 ? ` onclick="openGuide(${i})"` : ""}>
+        <div class="bd">
+          <div class="nm">${esc(d.label || d.ja)}</div>
+          <div class="sb">${d.label ? esc(d.ja) : "우리 자료에 없는 덱"}${
+            d.n ? ` · 누적 ${d.n}덱` : ""}</div>
+        </div>
+        ${ranks.length ? `<span class="tag${ranks[0] === "S" ? "" : " g"}">${
+          esc(ranks.join("/"))}</span>` : ""}
+        ${i >= 0 ? `<div class="muted">›</div>` : ""}</div>`;
+    }).join("")}</div>
+
+    <div class="card small muted">
+      우리 티어표는 대회 입상을 직접 세어 만든 것이고, 이 표는
+      <b>${esc(j.source)}</b> 가 매주 올리는 평가입니다. <b>출처가 다르니 어긋날 수
+      있습니다</b> — 어긋나는 지점이 오히려 볼 값이 있습니다.<br><br>
+      회색 이름표가 붙은 덱은 <b>우리 수집에는 안 잡힌 덱</b>입니다.
+    </div>`;
+}
+
+/* ---------------- 설정 · 갱신 ---------------- */
+function vSet(el) {
+  head("설정", "");
+  const url = window.Bridge ? Bridge.getUrl() : "";
+  el.innerHTML = `
+    <div class="card">
+      <div class="row between"><div class="nm">앱 안의 자료</div>
+        <div class="num">${ago(D.built_at)}</div></div>
+      <div class="small muted" style="margin-top:4px">
+        ${esc((D.built_at || "").replace("T", " ").slice(0, 16))} 기준<br>
+        티어 ${D.tier.rows.length} · 공략 ${D.guides.length} · 사이드 ${Object.keys(D.sides).length}덱
+      </div>
+    </div>
+    <div class="card">
+      <div class="nm" style="margin-bottom:8px">맥에서 새로 받기</div>
+      <div class="small muted" style="margin-bottom:var(--lg)">
+        <b>주소를 한 번만 넣으면 됩니다.</b> 그 뒤로는 앱을 켤 때마다 알아서 최신으로
+        맞춥니다. 맥이 꺼져 있거나 밖에 있으면 조용히 넘어가고 들고 있던 자료로 씁니다.
+        <br><br>주소는 맥에서 <b>python3 main.py serve --lan</b> 을 실행하면 나옵니다.</div>
+      <input id="u" value="${esc(url)}" placeholder="http://192.168.0.10:8765/app?t=..."
+        style="width:100%;height:52px;border:0;border-radius:12px;background:var(--surface);
+        padding:0 14px;font-size:15px;font-family:inherit;color:var(--fg)">
+      <button class="p" style="margin-top:12px" onclick="doSync()">지금 갱신</button>
+      <div id="sy" class="small" style="margin-top:12px"></div>
+    </div>`;
+}
+function doSync() {
+  const u = $("#u").value.trim();
+  if (!u) return;
+  $("#sy").innerHTML = `<span class="spin"></span> 받는 중…`;
+  Bridge.sync(u);
+}
+window.onSync = json => {
+  SYNCING = false;
+  let n;
+  try { n = JSON.parse(json); } catch (e) { return window.onSyncError("자료를 읽지 못했습니다"); }
+  const fresh = !D || n.built_at !== D.built_at;
+  D = n;
+  const box = $("#sy");
+  if (box) box.innerHTML = `<b style="color:var(--primary)">갱신 완료</b> · 티어 ${
+    D.tier.rows.length} · 공략 ${D.guides.length}`;
+  // 자동 갱신이면 보던 화면을 그대로 다시 그린다(튕기지 않게)
+  if (fresh) go(CUR); else mark("");
+};
+window.onSyncError = msg => {
+  SYNCING = false;
+  const box = $("#sy");
+  if (box) box.innerHTML = `<span style="color:var(--danger)">${esc(msg)}</span>`;
+  else mark("");     // 자동 갱신 실패는 조용히 넘어간다 — 자료는 이미 있다
+};
+
+/* ---------------- 시트 ---------------- */
+function openSheet(t, s) {
+  $("#sttl").textContent = t; $("#ssub").textContent = s || "";
+  $("#sheet").classList.add("on"); $("#sheet").scrollTop = 0;
+  history.pushState({sheet:1}, "");
+}
+function closeSheet() {
+  $("#sheet").classList.remove("on");
+  if (history.state && history.state.sheet) history.back();
+}
+window.addEventListener("popstate", () => $("#sheet").classList.remove("on"));
+window.appBack = () => {
+  if ($("#sheet").classList.contains("on")) { closeSheet(); return true; }
+  if (CUR !== "tier") { go("tier"); return true; }
+  return false;
+};
+boot();
+</script>
+</body>
+</html>
