@@ -98,6 +98,8 @@ nav .ic{font-size:19px;line-height:19px}
 .doc li{margin-bottom:6px}
 
 /* 전개가 언제 기준인지 */
+.newtx{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);
+  font-size:13px;line-height:20px;color:var(--body);white-space:pre-wrap}
 .fr{padding:var(--lg)}
 .fr-h{display:flex;align-items:center;gap:8px;font-size:14px;line-height:22px;color:var(--fg)}
 .fr-h b{font-weight:600}
@@ -161,6 +163,7 @@ nav .ic{font-size:19px;line-height:19px}
 
 <nav>
   <button class="on" data-t="tier" onclick="go('tier')"><span class="ic">▦</span>티어</button>
+  <button data-t="new" onclick="go('new')"><span class="ic">✦</span>이번주</button>
   <button data-t="week" onclick="go('week')"><span class="ic">◍</span>주차</button>
   <button data-t="guide" onclick="go('guide')"><span class="ic">▣</span>공략</button>
   <button data-t="side" onclick="go('side')"><span class="ic">⊞</span>사이드</button>
@@ -212,7 +215,7 @@ function go(t) {
   window.scrollTo(0, 0);
   // 없는 탭이면 첫 탭으로. 예전 버전이 저장해 둔 탭 이름('route')이 남아 있어도
   // 흰 화면이 되지 않게 한다 — 탭을 합치면 반드시 생기는 상황이다.
-  const V = {tier:vTier, week:vWeek, guide:vGuide, side:vSide, jp:vJp, set:vSet};
+  const V = {tier:vTier, new:vNew, week:vWeek, guide:vGuide, side:vSide, jp:vJp, set:vSet};
   const f = V[t] || (CUR = "tier", V.tier);
   document.querySelectorAll("nav button").forEach(b =>
     b.classList.toggle("on", b.dataset.t === CUR));
@@ -277,6 +280,49 @@ function drawWeek() {
       </div>
       <div class="vl"><span class="num">${base ? (x.n * 100 / base).toFixed(1) : "0.0"}</span><span class="muted small">%</span></div>
     </div>`).join("") : `<div class="empty">이 권역 자료가 없습니다</div>`;
+}
+
+/* ---------------- 이번 주 변화 ----------------
+
+   메타는 주 단위로 돈다. 4주를 뭉뚱그린 채용률은 지난주에 처음 들어온 카드를
+   옛 3주에 묻어버린다. 그래서 **지난주 덱리스트만** 따로 본다.
+
+   비율이 아니라 건수로 적는다 — 덱리스트 2건에 "100%" 를 붙이면 2건을
+   100건처럼 읽게 만든다. */
+function vNew(el) {
+  const W = D.whatsnew || [];
+  const live = W.filter(x => x.week > 0 && x.cards.length);
+  head("이번주", `지난주 덱리스트에 새로 들어온 카드 · 자료 ${ago(D.built_at)}`);
+  if (!live.length) {
+    el.innerHTML = `<div class="card"><div class="em">지난주 덱리스트가 아직 안 들어왔습니다.
+      대회 결과는 있어도 덱 목록이 안 붙는 경우가 많습니다.</div></div>`;
+    return;
+  }
+  const SEC = {main: "메인", extra: "엑스트라", side: "사이드"};
+  el.innerHTML = live.map(x => {
+    const lab = (D.tier.rows.find(t => t.name === x.archetype) || {}).label || x.archetype;
+    return `<h4 style="margin:var(--xl) 0 8px">${esc(lab)}
+        <span class="muted small">· 지난주 덱리스트 ${x.week}건</span></h4>
+      <div class="card">${x.cards.map((c, i) => `
+        <div class="item" style="align-items:flex-start" onclick="toggleNew(this)">
+          <div class="bd">
+            <div class="nm">${esc(c.name)}</div>
+            <div class="sb">${SEC[c.section] || c.section} · <b>${x.week}건 중 ${c.k}건</b>${
+              c.before ? ` · 그전 ${c.before}%` : " · 그전에는 없던 카드"}${
+              c.released ? ` · 발매 ${esc(c.released)}` : ""}</div>
+            <div class="newtx" style="display:none">${esc(c.text || "카드 텍스트가 없습니다.")}</div>
+          </div>
+          <div class="muted">▾</div>
+        </div>`).join("")}</div>`;
+  }).join("") + `<div class="card small muted">
+      <b>왜 들어왔는지는 카드가 하는 일로 판단하세요.</b> 카드를 누르면 텍스트가 펼쳐집니다.
+      이유를 지어내지 않았습니다.<br><br>
+      지난주 상위 8위까지의 덱리스트만 셉니다. 대회 입상 기록은 훨씬 많지만
+      덱 목록이 붙는 건 일부입니다.</div>`;
+}
+function toggleNew(el) {
+  const t = el.querySelector(".newtx");
+  if (t) t.style.display = t.style.display === "none" ? "block" : "none";
 }
 
 /* ---------------- 공략 ---------------- */
@@ -354,27 +400,29 @@ function freshBlock(d, rt) {
       <div class="fr-b">지금 우승하는 덱은 이 형태가 아닙니다.</div>`;
   }
 
-  // 성립률
-  const rate = w && w.of
-    ? `<div class="fr-b">최근 4주 덱리스트 <b>${w.of}건 중 ${w.n}건</b>에서 성립</div>`
-    : (df && !df.recent
-        ? `<div class="fr-b">최근 4주에는 덱리스트가 딸린 상위입상덱이 없습니다.</div>` : "");
+  // 성립 건수 — **지난주가 1순위.** 4주는 참고로 뒤에 붙인다.
+  const k = f.week;
+  const rate = k && k.of
+    ? `<div class="fr-b">지난주 덱리스트 <b>${k.of}건 중 ${k.n}건</b>에서 성립${
+        w && w.of ? ` <span class="muted">· 4주 누적 ${w.of}건 중 ${w.n}건</span>` : ""}</div>`
+    : `<div class="fr-b">지난주에는 덱리스트가 딸린 상위입상덱이 없습니다.${
+        w && w.of ? ` 4주 누적으로는 ${w.of}건 중 ${w.n}건.` : ""}</div>`;
 
   // 이 전개가 안 쓰는 새 카드
   const miss = (f.missing || []).length ? `
     <div class="fr-new">
-      <div class="fr-nh">최신 덱에 새로 들어왔는데 이 전개가 안 쓰는 카드</div>
+      <div class="fr-nh">지난주 덱에 새로 들어왔는데 이 전개가 안 쓰는 카드</div>
       ${f.missing.map(m => `<div class="fr-nr"><span>${esc(m.name)}</span>
-        <b>${m.before}% → ${m.now}%</b></div>`).join("")}
+        <b>${m.of}건 중 ${m.k}건</b></div>`).join("")}
       <div class="fr-b" style="margin-top:8px">덱 형태가 옮겨갔다는 뜻입니다.
         이 전개는 그 형태를 반영하지 않았습니다.</div>
     </div>` : "";
 
   const cav = rt.caveat ? `<div class="fr-cav">${md(rt.caveat)}</div>` : "";
 
-  const thin = df && !df.enough
-    ? `<div class="fr-b" style="margin-top:8px">최근 덱리스트가 ${df.recent}건뿐이라
-        형태가 바뀌었는지는 판단하지 않았습니다.</div>` : "";
+  const thin = df && df.week < 3
+    ? `<div class="fr-b" style="margin-top:8px">지난주 덱리스트가 ${df.week}건뿐입니다.
+        건수 그대로 읽어주세요 — 비율로 늘려 말하지 않았습니다.</div>` : "";
 
   return `<div class="card fr">${head}${rate}${cav}${miss}${thin}</div>`;
 }
