@@ -572,12 +572,13 @@ function vSet(el) {
       </div>
     </div>
     <div class="card">
-      <div class="nm" style="margin-bottom:8px">맥에서 새로 받기</div>
+      <div class="nm" style="margin-bottom:8px">자료 갱신</div>
       <div class="small muted" style="margin-bottom:var(--lg)">
-        <b>주소를 한 번만 넣으면 됩니다.</b> 그 뒤로는 앱을 켤 때마다 알아서 최신으로
-        맞춥니다. 맥이 꺼져 있거나 밖에 있으면 조용히 넘어가고 들고 있던 자료로 씁니다.
-        <br><br>주소는 맥에서 <b>python3 main.py serve --lan</b> 을 실행하면 나옵니다.</div>
-      <input id="u" value="${esc(url)}" placeholder="http://192.168.0.10:8765/app?t=..."
+        <b>손댈 것 없습니다.</b> 앱을 켤 때마다 알아서 최신으로 맞춥니다.
+        와이파이든 데이터든 인터넷만 되면 되고, 맥은 켜져 있지 않아도 됩니다.
+        인터넷이 안 되면 조용히 넘어가고 들고 있던 자료를 그대로 씁니다.
+        <br><br>아래 주소는 자료를 받아오는 곳입니다. 바꿀 일은 거의 없습니다.</div>
+      <input id="u" value="${esc(url)}" placeholder="https://raw.githubusercontent.com/…"
         style="width:100%;height:52px;border:0;border-radius:12px;background:var(--surface);
         padding:0 14px;font-size:15px;font-family:inherit;color:var(--fg)">
       <button class="p" style="margin-top:12px" onclick="doSync()">지금 갱신</button>
