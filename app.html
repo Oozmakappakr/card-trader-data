@@ -100,7 +100,7 @@ nav .ic{font-size:19px;line-height:19px}
 /* 전개가 언제 기준인지 */
 .newtx{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);
   font-size:13px;line-height:20px;color:var(--body);white-space:pre-wrap}
-.fr{padding:var(--lg)}
+.why{padding:var(--lg) 0;border-bottom:1px solid var(--border)}\n.why:last-child{border-bottom:0}\n.whytx{margin-top:6px;font-size:14px;line-height:22px;color:var(--body)}\n.whytx p{margin:0}\n.whytx b{color:var(--fg)}\n.fr{padding:var(--lg)}
 .fr-h{display:flex;align-items:center;gap:8px;font-size:14px;line-height:22px;color:var(--fg)}
 .fr-h b{font-weight:600}
 .fr-ok,.fr-no,.fr-un{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;flex:0 0 auto}
@@ -359,6 +359,7 @@ function drawGuide() {
 
   $("#sbody").innerHTML = `
     ${d ? routeBlock(d, rt) : ""}
+    ${whyBlock(d)}
     <h4 style="margin:var(--xl) 0 8px">해설 전문</h4>
     <div class="card"><div class="doc">${md(g.guide)}</div></div>
     ${(D.videos[g.archetype] || []).length ? `
@@ -425,6 +426,25 @@ function freshBlock(d, rt) {
         건수 그대로 읽어주세요 — 비율로 늘려 말하지 않았습니다.</div>` : "";
 
   return `<div class="card fr">${head}${rate}${cav}${miss}${thin}</div>`;
+}
+
+/* 신규 카드를 **왜 넣나.**
+
+   "지난주에 이 카드가 들어왔다" 까지는 덱리스트가 알려주지만, 왜 들어왔는지는
+   못 알려준다. 그건 카드가 뭘 하는지를 봐야 안다. 이유를 지어내지 않고
+   영상·카드 텍스트에서 옮긴 것만 싣는다. */
+function whyBlock(d) {
+  const w = d.why || [];
+  if (!w.length) return "";
+  return `<h4 style="margin:var(--xl) 0 8px">왜 이 카드를 넣나
+      <span class="muted small">· ${w.length}장</span></h4>
+    <div class="card">${w.map(c => `
+      <div class="why">
+        <div class="nm">${esc(c.ko || c.name)}</div>
+        ${c.ko && c.name !== c.ko ? `<div class="sb">${esc(c.name)}</div>` : ""}
+        <div class="whytx">${md(c.text)}</div>
+      </div>`).join("")}</div>
+    ${d.why_source ? `<div class="card small muted">근거: ${esc(d.why_source)}</div>` : ""}`;
 }
 
 /* 전개 한 갈래. **각 단계에 "여기서 맞으면" 을 바로 붙인다** —
