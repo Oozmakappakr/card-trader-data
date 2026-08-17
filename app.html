@@ -101,6 +101,26 @@ nav .ic{font-size:19px;line-height:19px}
 .newtx{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);
   font-size:13px;line-height:20px;color:var(--body);white-space:pre-wrap}
 .why{padding:var(--lg) 0;border-bottom:1px solid var(--border)}\n.why:last-child{border-bottom:0}\n.whytx{margin-top:6px;font-size:14px;line-height:22px;color:var(--body)}\n.whytx p{margin:0}\n.whytx b{color:var(--fg)}\n/* 카드 이름 — 누를 수 있다는 걸 밑줄로만 알린다. 색을 주면 글이 알록달록해진다 */
+.ctr{padding:var(--lg)}
+.ctr-h{font-size:15px;font-weight:600;color:var(--fg)}
+.ctr-ax{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.axchip{font-size:12.5px;padding:3px 9px;border-radius:999px;
+  background:var(--weak-bg);color:var(--weak-fg)}
+.axchip b{font-variant-numeric:tabular-nums}
+.ctr-b{font-size:12.5px;line-height:19px;color:var(--muted);margin-top:6px}
+.ctr-s{font-size:13px;font-weight:600;color:var(--fg);margin:14px 0 6px;
+  padding-top:12px;border-top:1px solid var(--border)}
+.ctr-r{padding:8px 0;border-bottom:1px dashed var(--border)}
+.ctr-r:last-of-type{border-bottom:0}
+.ctr-r2{padding:6px 0}
+.ctr-n{font-size:14px;color:var(--danger);font-weight:600}
+.ctr-w{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.wchip{font-size:11.5px;padding:2px 7px;border-radius:6px;
+  background:var(--surface);color:var(--body)}
+.ctr-e{font-size:13px;line-height:20px;color:var(--body);margin-top:4px}
+.ctr-o{font-size:12.5px;color:var(--muted);margin-top:3px}
+.eff{color:var(--primary);font-weight:600}
+.pop-w{font-size:11.5px;color:var(--primary);margin-top:8px}
 .cardw{border-bottom:1px dashed var(--muted);cursor:pointer}
 .cardw:active{background:var(--weak-bg)}
 .pop{position:fixed;z-index:60;background:var(--card,#fff);border:1px solid var(--border);
@@ -388,6 +408,7 @@ function drawGuide() {
     ? `초동 중 하나라도 ${d.any_starter}%` : "공략 해설";
 
   $("#sbody").innerHTML = `
+    ${d ? counterBlock(d) : ""}
     ${d ? routeBlock(d, rt) : ""}
     ${whyBlock(d)}
     ${g.guide ? `<h4 style="margin:var(--xl) 0 8px">해설 전문</h4>
@@ -459,6 +480,59 @@ function freshBlock(d, rt) {
   return `<div class="card fr">${head}${rate}${cav}${miss}${thin}</div>`;
 }
 
+/* **이 덱을 상대할 때 무엇을 던지나.** 공략 맨 위에 놓는다.
+
+   전개는 «이 덱을 굴리는 법» 이다. 정작 자주 필요한 건 반대쪽이라, 읽는 사람이
+   맨 먼저 보게 한다. 확인된 것(전개 자료의 저지점)과 추정한 것을 **섞지 않는다.** */
+function counterBlock(d) {
+  const c = d.counter;
+  if (!c) return "";
+  const ht = c.handtraps || [], tg = c.trap_guess || [], sd = c.sides || [];
+  if (!ht.length && !tg.length && !sd.length) return "";
+
+  const axes = Object.entries(c.lift || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
+
+  const where = h => h.where.map(w =>
+    `<span class="wchip">${esc(w.route)}${w.step ? ` ${w.step}단계` : " 전반"}</span>`).join("");
+
+  return `<div class="card ctr">
+    <div class="ctr-h">이 덱을 상대할 때</div>
+    ${axes.length ? `<div class="ctr-ax">${axes.map(([k, v]) =>
+      `<span class="axchip">${esc(k)} <b>${v}배</b></span>`).join("")}</div>
+      <div class="ctr-b">다른 덱보다 이만큼 더 씁니다. 여기를 막는 카드가 잘 듭니다.</div>` : ""}
+
+    ${ht.length ? `<div class="ctr-s">확인된 저지점 <span class="muted">· 전개 자료에서</span></div>
+      ${ht.slice(0, 6).map(h => `<div class="ctr-r">
+        <div class="ctr-n">${linkCards(esc(h.card))}</div>
+        <div class="ctr-w">${where(h)}</div>
+        <div class="ctr-e">${esc(h.where[0].effect || "")}</div>
+        ${h.outs.length ? `<div class="ctr-o">관통: ${h.outs.map(o => esc(o)).join(" · ")}</div>` : ""}
+      </div>`).join("")}` : ""}
+
+    ${tg.length ? `<div class="ctr-s">그 밖에 들 만한 패트랩
+        <span class="muted">· 카드 텍스트와 이 덱이 쓰는 것을 맞춰본 <b>추정</b></span></div>
+      ${tg.slice(0, 5).map(t => `<div class="ctr-r2">
+        <div class="ctr-n">${linkCards(esc(t.name))}</div>
+        <div class="ctr-e">${t.hits.map(h =>
+          `${esc(h.axis)}을 막는다 · 이 덱은 평균의 <b>${h.lift}배</b>`).join(" / ")}
+          <span class="muted">· 환경 채용 ${t.share}%</span></div>
+      </div>`).join("")}` : ""}
+
+    ${sd.length ? `<div class="ctr-s">사이드에서 가져올 것
+        <span class="muted">· 같은 방식의 <b>추정</b></span></div>
+      ${sd.slice(0, 6).map(t => `<div class="ctr-r2">
+        <div class="ctr-n">${linkCards(esc(t.name))}</div>
+        <div class="ctr-e">${t.hits.map(h =>
+          `${esc(h.axis)}을 막는다 · 이 덱은 평균의 <b>${h.lift}배</b>`).join(" / ")}
+          <span class="muted">· 환경 사이드 채용 ${t.share}%</span></div>
+      </div>`).join("")}` : ""}
+
+    <div class="ctr-b" style="margin-top:12px">
+      <b>«확인된 저지점»만 근거가 있는 것</b>입니다. 아래 둘은 카드 텍스트와 이 덱의
+      전개를 맞춰 고른 것이고 <b>승률 자료가 아닙니다.</b></div>
+  </div>`;
+}
+
 /* 신규 카드를 **왜 넣나.**
 
    "지난주에 이 카드가 들어왔다" 까지는 덱리스트가 알려주지만, 왜 들어왔는지는
@@ -496,7 +570,7 @@ function cardKeys() {
 }
 
 /* 글 안의 카드 이름을 누를 수 있게 감싼다. 이미 esc() 된 글을 받는다. */
-function linkCards(safe) {
+function linkCards(safe, ctx) {
   const ks = cardKeys();
   if (!ks.length) return safe;
   let out = safe, marks = [];
@@ -508,10 +582,27 @@ function linkCards(safe) {
     out = out.split(e).join(`\u0000${id}\u0001`);
   });
   return out.replace(/\u0000(\d+)\u0001/g, (_, i) =>
-    `<span class="cardw" onclick="popCard(event,'${jesc(marks[+i])}')">${esc(marks[+i])}</span>`);
+    `<span class="cardw" onclick="popCard(event,'${jesc(marks[+i])}','${jesc(ctx || "")}')">${
+      esc(marks[+i])}</span>`);
 }
 
-function popCard(ev, name) {
+/* 카드 텍스트를 ①②③ 단위로 자르고, 지금 단계가 쓰는 번호만 색을 준다.
+   전개 글이 «②의 효과로» 처럼 번호를 대주는 경우가 많아서 그걸 그대로 쓴다. */
+const _CIRC = "①②③④⑤⑥⑦⑧⑨";
+function markEffects(text, useNums) {
+  const parts = [];
+  let cur = "", curN = 0;
+  for (const ch of text) {
+    const i = _CIRC.indexOf(ch);
+    if (i >= 0) { if (cur) parts.push({n: curN, t: cur}); cur = ch; curN = i + 1; }
+    else cur += ch;
+  }
+  if (cur) parts.push({n: curN, t: cur});
+  return parts.map(p => p.n && useNums.has(p.n)
+    ? `<b class="eff">${esc(p.t)}</b>` : esc(p.t)).join("");
+}
+
+function popCard(ev, name, ctx) {
   ev.stopPropagation();
   const c = (D.cards || {})[name];
   const old = document.querySelector("#pop");
@@ -521,8 +612,10 @@ function popCard(ev, name) {
   el.id = "pop"; el.className = "pop"; el.dataset.name = name;
   el.innerHTML = `<div class="pop-n">${esc(name)}</div>
     ${c && c.spec ? `<div class="pop-s">${esc(c.spec)}</div>` : ""}
-    <div class="pop-t">${c && c.text ? esc(c.text)
-      : "이 카드의 한글 텍스트를 아직 못 받았습니다."}</div>`;
+    <div class="pop-t">${c && c.text
+      ? markEffects(c.text, effNums(ctx))
+      : "이 카드의 한글 텍스트를 아직 못 받았습니다."}</div>
+    ${c && c.text && effNums(ctx).size ? `<div class="pop-w">색칠한 곳이 이 단계에서 쓰는 효과입니다</div>` : ""}`;
   document.body.appendChild(el);
   // 누른 자리 아래에. 화면 밖으로 나가면 안쪽으로 밀어 넣는다.
   const r = ev.target.getBoundingClientRect();
@@ -537,6 +630,14 @@ function popCard(ev, name) {
   } else {
     el.style.top = below + "px";
   }
+}
+
+/* 그 단계 글에 적힌 ①②③ 을 모은다. 없으면 아무 데도 색을 안 준다. */
+function effNums(ctx) {
+  const out = new Set();
+  if (!ctx) return out;
+  for (const ch of ctx) { const i = _CIRC.indexOf(ch); if (i >= 0) out.add(i + 1); }
+  return out;
 }
 
 function closePop() {
@@ -615,7 +716,7 @@ function routeBlock(d, rt) {
         <div class="step-h">
           <div class="step-n">${i + 1}</div>
           <div class="bd">
-            <div class="step-t">${linkCards(esc(st.t))}</div>
+            <div class="step-t">${linkCards(esc(st.t), st.t)}</div>
             ${st.t_ja ? `<div class="orig">${esc(st.t_ja)}</div>` : ""}
             ${st.ts ? `<div class="sb">${esc(st.ts)}</div>` : ""}
           </div>
