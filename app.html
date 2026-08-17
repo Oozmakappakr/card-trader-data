@@ -326,32 +326,52 @@ function toggleNew(el) {
 }
 
 /* ---------------- 공략 ---------------- */
-function vGuide(el) {
-  head("공략", `${D.guides.length}개 · 자료 ${ago(D.built_at)}`);
+/* 공략 목록.
+
+   **해설이 없어도 전개가 있으면 띄운다.** 예전에는 guides 만 훑어서, 전개를
+   3갈래나 적어둔 덱이 목록에 아예 안 나왔다 — 자료를 만들어놓고 못 보는 꼴이다. */
+function guideList() {
   const R = D.routes || {};
-  el.innerHTML = `<div class="card">${D.guides.map((g, i) => {
+  const out = D.guides.map((g, i) => ({...g, gi: i}));
+  const seen = new Set(out.map(x => x.archetype));
+  Object.keys(R).forEach(a => {
+    if (seen.has(a)) return;
+    out.push({archetype: a, label: R[a].label || a, guide: "", gi: -1});
+  });
+  return out;
+}
+
+function vGuide(el) {
+  const L = guideList(), R = D.routes || {};
+  head("공략", `${L.length}덱 · 자료 ${ago(D.built_at)}`);
+  el.innerHTML = `<div class="card">${L.map((g, i) => {
     const rt = R[g.archetype];
+    const bits = [];
+    if (rt) bits.push(`전개 ${rt.routes.length}갈래`);
+    if (g.guide) bits.push(`해설 ${(g.guide.length / 1000).toFixed(1)}천자`);
+    else bits.push("해설 없음");
+    if (g.n_decks) bits.push(`입상덱 ${g.n_decks}`);
     return `<div class="item" onclick="openGuide(${i})">
       <div class="bd">
         <div class="nm">${esc(g.label)}</div>
-        <div class="sb">${rt ? `전개 ${rt.routes.length}갈래 · ` : ""}해설 ${
-          (g.guide.length / 1000).toFixed(1)}천자${g.n_decks ? ` · 입상덱 ${g.n_decks}` : ""}</div>
+        <div class="sb">${bits.join(" · ")}</div>
       </div>
       ${g.tier ? `<span class="tag${/3|외/.test(g.tier) ? " g" : ""}">${esc(g.tier)}</span>` : ""}
       <div class="muted">›</div>
     </div>`;
   }).join("")}</div>`;
 }
+
 let GI = 0, GR = 0;      // 열려 있는 공략 / 고른 초동
 function openGuide(i) {
   GI = i; GR = 0;
-  const g = D.guides[i];
+  const g = guideList()[i];
   openSheet(g.label, "전개와 공략");
   drawGuide();
 }
 
 function drawGuide() {
-  const g = D.guides[GI];
+  const g = guideList()[GI];
   const d = (D.routes || {})[g.archetype];
   const rt = d && d.routes[GR];
   $("#ssub").textContent = d && d.any_starter != null
@@ -360,8 +380,9 @@ function drawGuide() {
   $("#sbody").innerHTML = `
     ${d ? routeBlock(d, rt) : ""}
     ${whyBlock(d)}
-    <h4 style="margin:var(--xl) 0 8px">해설 전문</h4>
-    <div class="card"><div class="doc">${md(g.guide)}</div></div>
+    ${g.guide ? `<h4 style="margin:var(--xl) 0 8px">해설 전문</h4>
+      <div class="card"><div class="doc">${md(g.guide)}</div></div>`
+      : `<div class="card small muted">이 덱은 아직 해설 글이 없습니다. 위의 전개가 전부입니다.</div>`}
     ${(D.videos[g.archetype] || []).length ? `
       <h4 style="margin:var(--xl) 0 8px">근거 영상</h4>
       <div class="card">${D.videos[g.archetype].map(v => `
@@ -434,7 +455,8 @@ function freshBlock(d, rt) {
    못 알려준다. 그건 카드가 뭘 하는지를 봐야 안다. 이유를 지어내지 않고
    영상·카드 텍스트에서 옮긴 것만 싣는다. */
 function whyBlock(d) {
-  const w = d.why || [];
+  // 전개 자료가 아예 없는 덱은 d 가 없다 — 여기서 터지면 공략이 안 열린다
+  const w = (d && d.why) || [];
   if (!w.length) return "";
   return `<h4 style="margin:var(--xl) 0 8px">왜 이 카드를 넣나
       <span class="muted small">· ${w.length}장</span></h4>
