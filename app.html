@@ -155,6 +155,12 @@ nav .ic{font-size:19px;line-height:19px}
   font-variant-numeric:tabular-nums;color:var(--primary);font-size:15px;line-height:23px}
 .step-t{color:var(--fg);font-size:15px;line-height:23px}
 .step.danger .step-n{color:var(--danger)}
+.step.warn .step-n{color:#f59e0b}
+.gs{margin:8px 0 0 42px;padding:9px 12px;background:var(--surface);
+  border-radius:10px;border-left:3px solid #f0b429}
+.gs b{color:var(--fg)}
+.gs-w{font-size:11.5px;line-height:18px;color:var(--muted);margin-top:3px}
+.gs-x{color:#f0b429;font-weight:700}
 .hit{margin:10px 0 0 42px;padding:12px 14px;background:#fff5f5;
   border-radius:12px;border-left:3px solid var(--danger)}
 .hit-h{display:flex;align-items:center;gap:6px;color:var(--fg);font-size:14px;line-height:21px}
@@ -663,6 +669,14 @@ function routeBlock(d, rt) {
   const pct = v => `<span class="num">${v}</span><span class="muted small">%</span>`;
   const general = rt.breaks.filter(b => !b.step);       // 전개 전반
   const atStep = n => rt.breaks.filter(b => b.step === n);
+  const atGuess = n => (rt.guess || []).filter(b => b.step === n);
+
+  /* 추정 지점. 확인된 저지점과 **생김새를 다르게** 한다 — 근거의 무게가 다르다. */
+  const gss = g => `<div class="gs">
+    <span class="gs-x">?</span> <b>${esc(g.card)}</b>
+    <span class="muted">— ${esc(g.note)}</span>
+    <div class="gs-w">이 단계에 «${esc(g.why)}» 가 있어서 짚었습니다 · <b>추정</b></div>
+  </div>`;
 
   const hit = b => {
     const o = b.out_stat;
@@ -711,8 +725,8 @@ function routeBlock(d, rt) {
     <h4 style="margin:var(--xl) 0 8px">전개 순서
       <span class="muted small">· ${rt.steps.length}단계</span></h4>
     <div class="card">${rt.steps.map((st, i) => {
-      const bs = atStep(i + 1);
-      return `<div class="step${bs.length ? " danger" : ""}">
+      const bs = atStep(i + 1), gs = atGuess(i + 1);
+      return `<div class="step${bs.length ? " danger" : (gs.length ? " warn" : "")}">
         <div class="step-h">
           <div class="step-n">${i + 1}</div>
           <div class="bd">
@@ -722,6 +736,7 @@ function routeBlock(d, rt) {
           </div>
         </div>
         ${bs.map(hit).join("")}
+        ${gs.map(gss).join("")}
       </div>`;
     }).join("")}</div>
 
