@@ -118,6 +118,8 @@ nav .ic{font-size:19px;line-height:19px}
 .wchip{font-size:11.5px;padding:2px 7px;border-radius:6px;
   background:var(--surface);color:var(--body)}
 .ctr-e{font-size:13px;line-height:20px;color:var(--body);margin-top:4px}
+.ctr-p{display:flex;gap:7px;align-items:flex-start;margin-top:5px}
+.ctr-q{font-size:12.5px;line-height:19px;color:var(--body);flex:1}
 .ctr-o{font-size:12.5px;color:var(--muted);margin-top:3px}
 .eff{color:var(--primary);font-weight:600}
 .pop-w{font-size:11.5px;color:var(--primary);margin-top:8px}
@@ -516,21 +518,26 @@ function counterBlock(d) {
       </div>`).join("")}` : ""}
 
     ${tg.length ? `<div class="ctr-s">그 밖에 들 만한 패트랩
-        <span class="muted">· 카드 텍스트와 이 덱이 쓰는 것을 맞춰본 <b>추정</b></span></div>
-      ${tg.slice(0, 5).map(t => `<div class="ctr-r2">
-        <div class="ctr-n">${linkCards(esc(t.name))}</div>
-        <div class="ctr-e">${t.hits.map(h =>
-          `${esc(h.axis)}을 막는다 · 이 덱은 평균의 <b>${h.lift}배</b>`).join(" / ")}
-          <span class="muted">· 환경 채용 ${t.share}%</span></div>
+        <span class="muted">· 전개를 읽고 짚은 <b>추정</b></span></div>
+      ${tg.slice(0, 6).map(t => `<div class="ctr-r">
+        <div class="ctr-n">${linkCards(esc(t.card))}
+          <span class="muted small">· ${t.where.length}갈래에서</span></div>
+        <div class="ctr-e">${esc(t.note)}</div>
+        ${t.where.slice(0, 3).map(w => `<div class="ctr-p">
+          <span class="wchip">${esc(w.route)} ${w.step}단계</span>
+          <span class="ctr-q">${linkCards(esc(w.text))}</span></div>`).join("")}
       </div>`).join("")}` : ""}
 
     ${sd.length ? `<div class="ctr-s">사이드에서 가져올 것
-        <span class="muted">· 같은 방식의 <b>추정</b></span></div>
-      ${sd.slice(0, 6).map(t => `<div class="ctr-r2">
-        <div class="ctr-n">${linkCards(esc(t.name))}</div>
-        <div class="ctr-e">${t.hits.map(h =>
-          `${esc(h.axis)}을 막는다 · 이 덱은 평균의 <b>${h.lift}배</b>`).join(" / ")}
-          <span class="muted">· 환경 사이드 채용 ${t.share}%</span></div>
+        <span class="muted">· 이 덱이 남달리 많이 쓰는 것을 막는 카드 · <b>추정</b></span></div>
+      ${sd.slice(0, 6).map(t => `<div class="ctr-r">
+        <div class="ctr-n">${linkCards(esc(t.name))}
+          <span class="muted small">· 환경 사이드 ${t.share}%</span></div>
+        <div class="ctr-e">${esc(t.hits[0].axis)}를 막는다 —
+          이 덱은 평균의 <b>${t.hits[0].lift}배</b> 쓴다</div>
+        ${(t.hits[0].where || []).slice(0, 3).map(w => `<div class="ctr-p">
+          <span class="wchip">${esc(w.route)} ${w.step}단계</span>
+          <span class="ctr-q">${linkCards(esc(w.text))}</span></div>`).join("")}
       </div>`).join("")}` : ""}
 
     <div class="ctr-b" style="margin-top:12px">
