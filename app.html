@@ -177,6 +177,10 @@ nav .ic{font-size:19px;line-height:19px}
 .stops{display:flex;flex-direction:column;gap:6px;margin-top:8px}
 .stops .r{display:flex;align-items:center;gap:8px;font-size:13px}
 .stops .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stops .jump{background:none;border:0;padding:0;font:inherit;color:var(--primary);
+  text-align:left;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.step.flash{animation:fl 1.6s ease-out}
+@keyframes fl{0%{background:#fff3bf}60%{background:#fff3bf}100%{background:transparent}}
 .stops .g{width:88px;height:7px;border-radius:4px;background:#e5e8eb;overflow:hidden;flex:none}
 .stops .g i{display:block;height:100%;background:var(--primary)}
 .stops .v{width:46px;text-align:right;font-weight:700;flex:none}
@@ -548,7 +552,8 @@ function counterBlock(d) {
     ${stops.length ? `<div class="ctr-s">던지면 몇 %로 멈추나
         <span class="muted">· 상대가 다른 초동을 쥐고 있을 확률까지 뺀 값</span></div>
       <div class="stops">${stops.map(x => `<div class="r">
-        <span class="n">${linkCards(esc(x.card))}</span>
+        <button class="n jump" onclick="jumpStep(${x.best.route_i},${x.best.step})"
+          >${esc(x.card)} <span class="muted small">→ ${esc(x.best.route)} ${x.best.step}단계</span></button>
         <span class="g"><i style="width:${Math.round(x.stop)}%"></i></span>
         <span class="v">${x.stop}%</span></div>`).join("")}</div>
       <div class="ctr-b">가장 잘 드는 자리는 <b>${esc(stops[0].best.route)} ${
@@ -707,6 +712,19 @@ function popCard(ev, name, ctx) {
   }
 }
 
+/* 정지율 목록에서 카드를 누르면 **그 카드가 가장 잘 드는 자리**로 데려간다.
+   «어디에 던지나» 가 이 화면의 요점인데, 목록만 보고는 그 자리를 못 찾는다. */
+function jumpStep(routeIdx, step) {
+  if (routeIdx != null && routeIdx !== GR) { GR = routeIdx; drawGuide(); }
+  setTimeout(() => {
+    const el = document.querySelector("#stp" + step);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("flash");
+    setTimeout(() => el.classList.remove("flash"), 1600);
+  }, 30);
+}
+
 /* 그 단계 글에 적힌 ①②③ 을 모은다. 없으면 아무 데도 색을 안 준다. */
 function effNums(ctx) {
   const out = new Set();
@@ -813,7 +831,7 @@ function routeBlock(d, rt) {
       <span class="muted small">· ${rt.steps.length}단계</span></h4>
     <div class="card">${rt.steps.map((st, i) => {
       const bs = atStep(i + 1), gs = atGuess(i + 1);
-      return `<div class="step${bs.length ? " danger" : (gs.length ? " warn" : "")}">
+      return `<div class="step${bs.length ? " danger" : (gs.length ? " warn" : "")}" id="stp${i + 1}">
         <div class="step-h">
           <div class="step-n">${i + 1}</div>
           <div class="bd">
