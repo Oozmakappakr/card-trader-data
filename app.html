@@ -130,6 +130,9 @@ nav .ic{font-size:19px;line-height:19px}
   max-height:46vh;overflow-y:auto}
 .pop-n{font-size:15px;font-weight:600;color:var(--fg);line-height:22px}
 .pop-s{font-size:12.5px;color:var(--primary);margin-top:3px}
+.pop-b{font-size:10.5px;font-weight:600;color:#8b5cf6;background:#f3eeff;
+  border-radius:5px;padding:1.5px 5px;margin-left:6px;vertical-align:middle;white-space:nowrap}
+.pop-en{font-size:12.5px;line-height:1.55}
 .pop-t{font-size:13.5px;line-height:21px;color:var(--body);margin-top:8px;white-space:pre-wrap}
 .orig{font-size:12.5px;line-height:19px;color:var(--muted);margin-top:2px}\n.fr{padding:var(--lg)}
 .fr-h{display:flex;align-items:center;gap:8px;font-size:14px;line-height:22px;color:var(--fg)}
@@ -162,6 +165,20 @@ nav .ic{font-size:19px;line-height:19px}
   border-radius:10px;border-left:3px solid #f0b429}
 .gs b{color:var(--fg)}
 .gs-w{font-size:11.5px;line-height:18px;color:var(--muted);margin-top:3px}
+/* 던지면 몇 %로 멈추나. 잘 멈추면 파랑, 어중간하면 노랑, 헛수고면 회색. */
+.st{margin-top:9px;padding:9px 11px;border-radius:9px;border:1px solid var(--line)}
+.st-hi{background:#e8f3ff;border-color:#c9e2ff}
+.st-mid{background:#fff8e6;border-color:#ffe9b0}
+.st-lo{background:#f4f5f7;border-color:#e5e8eb}
+.st-h{font-size:13px;line-height:20px;color:var(--body)}
+.st-h b{font-size:15px}
+.st-l{font-size:12px;line-height:19px;color:var(--body);margin-top:4px}
+.stops{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.stops .r{display:flex;align-items:center;gap:8px;font-size:13px}
+.stops .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stops .g{width:88px;height:7px;border-radius:4px;background:#e5e8eb;overflow:hidden;flex:none}
+.stops .g i{display:block;height:100%;background:var(--primary)}
+.stops .v{width:46px;text-align:right;font-weight:700;flex:none}
 .gs-x{color:#f0b429;font-weight:700}
 .hit{margin:10px 0 0 42px;padding:12px 14px;background:#fff5f5;
   border-radius:12px;border-left:3px solid var(--danger)}
@@ -516,11 +533,26 @@ function counterBlock(d) {
   const where = h => h.where.map(w =>
     `<span class="wchip">${esc(w.route)}${w.step ? ` ${w.step}단계` : " 전반"}</span>`).join("");
 
+  /* **어느 패트랩이 실제로 잘 멈추나.** 「발동 가능」이 아니라 기대 정지율이다.
+     갈래마다 다르므로 초동 채용률로 무게를 줬다 — 잘 안 쓰는 갈래에서 잘 멈춘다고
+     좋은 패트랩인 것은 아니다. */
+  const stops = (d.stops || []).slice(0, 6);
+
   return `<div class="card ctr">
     <div class="ctr-h">이 덱을 상대할 때</div>
     ${axes.length ? `<div class="ctr-ax">${axes.map(([k, v]) =>
       `<span class="axchip">${esc(k)} <b>${v}배</b></span>`).join("")}</div>
       <div class="ctr-b">다른 덱보다 이만큼 더 씁니다. 여기를 막는 카드가 잘 듭니다.</div>` : ""}
+
+    ${stops.length ? `<div class="ctr-s">던지면 몇 %로 멈추나
+        <span class="muted">· 상대가 다른 초동을 쥐고 있을 확률까지 뺀 값</span></div>
+      <div class="stops">${stops.map(x => `<div class="r">
+        <span class="n">${linkCards(esc(x.card))}</span>
+        <span class="g"><i style="width:${Math.round(x.stop)}%"></i></span>
+        <span class="v">${x.stop}%</span></div>`).join("")}</div>
+      <div class="ctr-b">가장 잘 드는 자리는 <b>${esc(stops[0].best.route)} ${
+        stops[0].best.step}단계</b> — ${stops[0].card} 로 ${stops[0].best.stop}% 정지.
+        전개 아래 단계마다 자리별 확률이 적혀 있습니다.</div>` : ""}
 
     ${ht.length ? `<div class="ctr-s">확인된 저지점 <span class="muted">· 전개 자료에서</span></div>
       ${ht.slice(0, 6).map(h => `<div class="ctr-r">
@@ -646,12 +678,15 @@ function popCard(ev, name, ctx) {
   closePop();
   const el = document.createElement("div");
   el.id = "pop"; el.className = "pop"; el.dataset.name = name;
-  el.innerHTML = `<div class="pop-n">${esc(name)}</div>
+  // 정발 전 카드는 코나미 한국 DB 에 없어서 영문으로 채운다. 한글인 척하지 않는다.
+  const en = c && c.text && c.ko === false;
+  el.innerHTML = `<div class="pop-n">${esc(name)}${
+      en ? `<span class="pop-b">정발 전 · 영문</span>` : ""}</div>
     ${c && c.spec ? `<div class="pop-s">${esc(c.spec)}</div>` : ""}
-    <div class="pop-t">${c && c.text
-      ? markEffects(c.text, effNums(ctx))
-      : "이 카드의 한글 텍스트를 아직 못 받았습니다."}</div>
-    ${c && c.text && effNums(ctx).size ? `<div class="pop-w">색칠한 곳이 이 단계에서 쓰는 효과입니다</div>` : ""}`;
+    <div class="pop-t${en ? " pop-en" : ""}">${c && c.text
+      ? markEffects(c.text, en ? new Set() : effNums(ctx))
+      : "이 카드의 텍스트를 아직 못 받았습니다."}</div>
+    ${c && c.text && !en && effNums(ctx).size ? `<div class="pop-w">색칠한 곳이 이 단계에서 쓰는 효과입니다</div>` : ""}`;
   document.body.appendChild(el);
   // 누른 자리 아래에. 화면 밖으로 나가면 안쪽으로 밀어 넣는다.
   const r = ev.target.getBoundingClientRect();
@@ -706,7 +741,24 @@ function routeBlock(d, rt) {
     <span class="gs-x">?</span> <b>${esc(g.card)}</b>
     <span class="muted">— ${esc(g.note)}</span>
     <div class="gs-w">이 단계에 «${esc(g.why)}» 가 있어서 짚었습니다 · <b>추정</b></div>
+    ${stopBar(g.stop_stat)}
   </div>`;
+
+  /* «던지면 몇 %로 멈추나». 「발동 가능」만 적으면 판단이 안 된다 —
+     상대가 다른 초동을 하나만 더 쥐어도 그냥 다시 가기 때문이다. */
+  const stopBar = st => {
+    if (!st || st.stop === null || st.stop === undefined) return "";
+    const cls = st.stop >= 60 ? "st-hi" : st.stop >= 35 ? "st-mid" : "st-lo";
+    const list = (arr, lab) => !arr || !arr.length ? "" :
+      `<div class="st-l"><span class="muted">${lab}</span> ${arr.map(o =>
+        `${linkCards(esc(o.name))} <b>${o.p}%</b>`).join(" · ")}</div>`;
+    return `<div class="st ${cls}">
+      <div class="st-h">여기 던지면 <b>${st.stop}%</b> 정지
+        <span class="muted small">· 관통 ${st.thru}% · 상대 남은 패 ${st.hand}장</span></div>
+      ${list(st.care, "케어")}
+      ${list(st.alt, "다른 초동으로 갈아탐")}
+    </div>`;
+  };
 
   const hit = b => {
     const o = b.out_stat;
@@ -721,6 +773,7 @@ function routeBlock(d, rt) {
         ? `<b>→ ${esc(b.out_card)}</b> 가 패에 있으면 뚫린다
            <span class="muted">(채용 ${o.share}% × ${o.copies}장 → ${o.p}%)</span>`
         : `→ ${esc(b.out)}`}</div>
+      ${stopBar(b.stop_stat)}
     </div>`;
   };
 
