@@ -130,6 +130,7 @@ nav .ic{font-size:19px;line-height:19px}
   max-height:46vh;overflow-y:auto}
 .pop-n{font-size:15px;font-weight:600;color:var(--fg);line-height:22px}
 .pop-s{font-size:12.5px;color:var(--primary);margin-top:3px}
+.pop-b2{color:#6b7684;background:#f2f4f6}
 .pop-b{font-size:10.5px;font-weight:600;color:#8b5cf6;background:#f3eeff;
   border-radius:5px;padding:1.5px 5px;margin-left:6px;vertical-align:middle;white-space:nowrap}
 .pop-en{font-size:12.5px;line-height:1.55}
@@ -678,10 +679,13 @@ function popCard(ev, name, ctx) {
   closePop();
   const el = document.createElement("div");
   el.id = "pop"; el.className = "pop"; el.dataset.name = name;
-  // 정발 전 카드는 코나미 한국 DB 에 없어서 영문으로 채운다. 한글인 척하지 않는다.
-  const en = c && c.text && c.ko === false;
-  el.innerHTML = `<div class="pop-n">${esc(name)}${
-      en ? `<span class="pop-b">정발 전 · 영문</span>` : ""}</div>
+  // 정발 전 카드는 코나미 한국 DB 에 없다. 나무위키 번역 → 그것도 없으면 영문.
+  // **출처를 숨기지 않는다** — 정발 텍스트인 척하면 안 된다.
+  const src = c && c.text ? (c.src || (c.ko === false ? "en" : "konami")) : null;
+  const en = src === "en";
+  const badge = src === "namu" ? `<span class="pop-b">나무위키 번역</span>`
+    : en ? `<span class="pop-b pop-b2">정발 전 · 영문</span>` : "";
+  el.innerHTML = `<div class="pop-n">${esc(name)}${badge}</div>
     ${c && c.spec ? `<div class="pop-s">${esc(c.spec)}</div>` : ""}
     <div class="pop-t${en ? " pop-en" : ""}">${c && c.text
       ? markEffects(c.text, en ? new Set() : effNums(ctx))
