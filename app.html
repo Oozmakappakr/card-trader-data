@@ -108,6 +108,9 @@ nav .ic{font-size:19px;line-height:19px}
   background:var(--weak-bg);color:var(--weak-fg)}
 .axchip b{font-variant-numeric:tabular-nums}
 .ctr-b{font-size:12.5px;line-height:19px;color:var(--muted);margin-top:6px}
+.ctr-p{font-size:12px;line-height:19px;color:var(--muted);background:#f7f8fa;
+  border-radius:8px;padding:8px 10px;margin-bottom:10px}
+.ctr-r.dodge{border-left:3px solid #ffc107;padding-left:9px;background:#fffbf0}
 .ctr-s{font-size:13px;font-weight:600;color:var(--fg);margin:14px 0 6px;
   padding-top:12px;border-top:1px solid var(--border)}
 .ctr-r{padding:8px 0;border-bottom:1px dashed var(--border)}
@@ -536,7 +539,7 @@ function counterBlock(d) {
   const axes = Object.entries(c.lift || {}).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
   const where = h => h.where.map(w =>
-    `<span class="wchip">${esc(w.route)}${w.step ? ` ${w.step}단계` : " 전반"}</span>`).join("");
+    `<span class="wchip">상대 ${esc(w.route)}${w.step ? ` ${w.step}단계` : " 전반"}</span>`).join("");
 
   /* **어느 패트랩이 실제로 잘 멈추나.** 「발동 가능」이 아니라 기대 정지율이다.
      갈래마다 다르므로 초동 채용률로 무게를 줬다 — 잘 안 쓰는 갈래에서 잘 멈춘다고
@@ -545,6 +548,8 @@ function counterBlock(d) {
 
   return `<div class="card ctr">
     <div class="ctr-h">이 덱을 상대할 때</div>
+    <div class="ctr-p">여기 나오는 갈래 이름과 인용문은 <b>상대가 이 덱을 굴리는 쪽</b>
+      글에서 옮긴 것입니다 — 인용문 속 «상대» 는 <b>당신</b>을 가리킵니다.</div>
     ${axes.length ? `<div class="ctr-ax">${axes.map(([k, v]) =>
       `<span class="axchip">${esc(k)} <b>${v}배</b></span>`).join("")}</div>
       <div class="ctr-b">다른 덱보다 이만큼 더 씁니다. 여기를 막는 카드가 잘 듭니다.</div>` : ""}
@@ -553,19 +558,28 @@ function counterBlock(d) {
         <span class="muted">· 상대가 다른 초동을 쥐고 있을 확률까지 뺀 값</span></div>
       <div class="stops">${stops.map(x => `<div class="r">
         <button class="n jump" onclick="jumpStep(${x.best.route_i},${x.best.step})"
-          >${esc(x.card)} <span class="muted small">→ ${esc(x.best.route)} ${x.best.step}단계</span></button>
+          >${esc(x.card)} <span class="muted small">→ 상대 ${esc(x.best.route)} ${x.best.step}단계</span></button>
         <span class="g"><i style="width:${Math.round(x.stop)}%"></i></span>
         <span class="v">${x.stop}%</span></div>`).join("")}</div>
       <div class="ctr-b">가장 잘 드는 자리는 <b>${esc(stops[0].best.route)} ${
         stops[0].best.step}단계</b> — ${stops[0].card} 로 ${stops[0].best.stop}% 정지.
         전개 아래 단계마다 자리별 확률이 적혀 있습니다.</div>` : ""}
 
-    ${ht.length ? `<div class="ctr-s">확인된 저지점 <span class="muted">· 전개 자료에서</span></div>
-      ${ht.slice(0, 6).map(h => `<div class="ctr-r">
+    ${ht.filter(h => h.kind === "stop").length ? `<div class="ctr-s">확인된 저지점
+        <span class="muted">· 전개 자료에서</span></div>
+      ${ht.filter(h => h.kind === "stop").slice(0, 6).map(h => `<div class="ctr-r">
         <div class="ctr-n">${linkCards(esc(h.card))}</div>
         <div class="ctr-w">${where(h)}</div>
-        <div class="ctr-e">${esc(h.where[0].effect || "")}</div>
+        <div class="ctr-e">${bold(esc((h.where.find(w => w.kind === "stop") || h.where[0]).effect || ""))}</div>
         ${h.outs.length ? `<div class="ctr-o">관통: ${h.outs.map(o => esc(o)).join(" · ")}</div>` : ""}
+      </div>`).join("")}` : ""}
+
+    ${ht.filter(h => h.kind === "dodge").length ? `<div class="ctr-s">상대는 이렇게 피한다
+        <span class="muted">· 던져도 안 통하는 자리</span></div>
+      ${ht.filter(h => h.kind === "dodge").slice(0, 4).map(h => `<div class="ctr-r dodge">
+        <div class="ctr-n">${linkCards(esc(h.card))}</div>
+        <div class="ctr-w">${where(h)}</div>
+        <div class="ctr-e">${bold(esc(h.where[0].effect || ""))}</div>
       </div>`).join("")}` : ""}
 
     ${tg.length ? `<div class="ctr-s">그 밖에 들 만한 패트랩
@@ -573,7 +587,7 @@ function counterBlock(d) {
       ${tg.slice(0, 6).map(t => `<div class="ctr-r">
         <div class="ctr-n">${linkCards(esc(t.card))}
           <span class="muted small">· ${t.where.length}갈래에서</span></div>
-        <div class="ctr-e">${esc(t.note)}</div>
+        <div class="ctr-e">${bold(esc(t.note))}</div>
         ${t.where.slice(0, 3).map(w => `<div class="ctr-p">
           <span class="wchip">${esc(w.route)} ${w.step}단계</span>
           <span class="ctr-q">${linkCards(esc(w.text))}</span></div>`).join("")}
@@ -644,6 +658,12 @@ function cardKeys() {
 }
 
 /* 글 안의 카드 이름을 누를 수 있게 감싼다. 이미 esc() 된 글을 받는다. */
+/* 자료 글에는 **굵게** 표시가 섞여 있다. esc 로 찍으면 별표가 그대로 보인다.
+   전문 해설은 md() 가 처리하지만 한 줄짜리 글은 여기서 살린다. */
+function bold(safe) {
+  return safe.replace(/\*\*([^*]{1,80})\*\*/g, "<b>$1</b>");
+}
+
 function linkCards(safe, ctx) {
   const ks = cardKeys();
   if (!ks.length) return safe;
@@ -790,11 +810,11 @@ function routeBlock(d, rt) {
         <b>${linkCards(esc(b.card))}</b> 를 맞으면
         ${o ? `<span class="hit-p">${o.p}%</span>` : ""}
       </div>
-      <div class="hit-b">${linkCards(esc(b.effect))}</div>
+      <div class="hit-b">${bold(linkCards(esc(b.effect)))}</div>
       <div class="hit-o">${o
         ? `<b>→ ${esc(b.out_card)}</b> 가 패에 있으면 뚫린다
            <span class="muted">(채용 ${o.share}% × ${o.copies}장 → ${o.p}%)</span>`
-        : `→ ${esc(b.out)}`}</div>
+        : `→ ${bold(esc(b.out))}`}</div>
       ${stopBar(b.stop_stat)}
     </div>`;
   };
