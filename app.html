@@ -305,7 +305,11 @@ function vTier(el) {
         <div class="bar"><i style="width:${(x.share / max * 100).toFixed(0)}%"></i></div>
       </div>
       <div class="vl"><span class="num">${x.share.toFixed(1)}</span><span class="muted small">%</span></div>
-    </div>`).join("")}</div>`;
+    </div>`).join("")}</div>
+    ${t.unclassified ? `<div class="card small muted" style="margin-top:var(--lg)">
+      덱 이름을 못 알아본 입상덱 <b>${t.unclassified}건</b>은 표에서 뺐습니다.
+      서로 다른 덱이라 한 줄로 묶으면 «점유율 15%짜리 덱» 처럼 보이기 때문입니다.
+      <b>분모에는 넣었으므로</b> 위 점유율의 합은 100%가 안 됩니다.</div>` : ""}`;
 }
 
 /* ---------------- 주차 · 권역 ---------------- */
